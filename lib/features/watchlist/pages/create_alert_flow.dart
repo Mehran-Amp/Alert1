@@ -323,8 +323,8 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       return '$numStr%';
     } else if (quoteCurrency == 'pts') {
       return '$numStr pts';
-    } else if (quoteCurrency == 'Billion USD') {
-      return '\$$numStr B';
+    } else if (quoteCurrency == 'Billion USD' || quoteCurrency == 'B USD') {
+      return '\$$numStr B USD';
     } else if (quoteCurrency == 'JPY' || quoteCurrency == 'CNY') {
       return '¥$numStr';
     } else if (quoteCurrency == 'CHF') {

@@ -1159,7 +1159,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
   String _getExchangeDisplayName(String exchangeId, String lang) {
     switch (exchangeId) {
       case 'global_stocks':
-        return 'Global Stocks';
+      case 'GLOBALSTOKS':
+      case 'GLOBAL_STOCKS':
+      case 'Global Stocks':
+        return 'GL-ST';
+      case 'iran_market':
+      case 'IRAN_MARKET':
+        return 'IR_M';
       case 'binance':
         return 'Binance';
       case 'nobitex':

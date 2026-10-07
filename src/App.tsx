@@ -130,7 +130,12 @@ export const formatExchangeTag = (name?: string) => {
     .replace(/GLOBALSTOCKS/gi, 'GL-ST')
     .replace(/GLOBAL_STOCKS/gi, 'GL-ST')
     .replace(/Global Stocks/gi, 'GL-ST')
-    .replace(/global_stocks/gi, 'GL-ST');
+    .replace(/global_stocks/gi, 'GL-ST')
+    .replace(/Global Commodities/gi, 'GL-ST')
+    .replace(/Global Market/gi, 'GL-ST')
+    .replace(/Global Indices/gi, 'GL-ST')
+    .replace(/Billion USD/gi, 'B USD')
+    .replace(/Billion/gi, 'B USD');
 };
 
 const IRANIAN_POPULAR_PAIRS = [
@@ -409,7 +414,7 @@ const INITIAL_RULES: AlertRule[] = [
     uuid: 'rule-gold-macro',
     marketType: 'stocks_macro',
     exchangeId: 'commodities',
-    exchangeName: 'Global Commodities',
+    exchangeName: 'GL-ST',
     baseCurrency: 'GOLD',
     counterCurrency: 'USD',
     marketSymbol: 'XAU/USD (طلا)',
@@ -1439,7 +1444,7 @@ export default function App() {
       // Fires if real volume surged by requested threshold or simulated push
       if (volGrowth >= volReq || (forcedPriceDeltaPercent !== undefined && Math.abs(forcedPriceDeltaPercent) >= 1.0)) {
         triggered = true;
-        const volFormatted = currentVol >= 1e9 ? `$${(currentVol / 1e9).toFixed(2)}B` : `$${(currentVol / 1e6).toFixed(1)}M`;
+        const volFormatted = currentVol >= 1e9 ? `$${(currentVol / 1e9).toFixed(2)} B USD` : `$${(currentVol / 1e6).toFixed(1)} M USD`;
         title = `📊 ${rule.marketSymbol} جهش حجم معاملات! ${volFormatted} ⚡`;
         body = rule.customNote && rule.customNote.trim()
           ? rule.customNote.trim()
