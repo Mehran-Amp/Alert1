@@ -187,6 +187,7 @@ else:
 http_client: Optional[httpx.AsyncClient] = None
 scheduler = AsyncIOScheduler()
 _db_lock = asyncio.Lock()
+_prof_lock = asyncio.Lock()
 
 # Price In-Memory Cache: key -> (price, timestamp)
 PRICE_CACHE: Dict[str, Tuple[float, float]] = {}
@@ -350,7 +351,7 @@ def load_user_profiles_from_disk() -> Dict[str, Dict[str, Any]]:
 async def save_user_profiles_to_disk_async(profiles: Dict[str, Dict[str, Any]]):
     try:
         loop = asyncio.get_running_loop()
-        async with _db_lock:
+        async with _prof_lock:
             prof_copy = dict(profiles)
         json_str = json.dumps(prof_copy, ensure_ascii=False, indent=2)
 
