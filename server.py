@@ -1410,9 +1410,8 @@ def get_exchange_display_name(exchange_id: str) -> str:
         'mexc': 'MEXC', 'gateio': 'Gate.io', 'gate': 'Gate.io',
         'coinex': 'CoinEx', 'okx': 'OKX', 'bybit': 'Bybit',
         'bitbarg': 'BitBarg', 'tetherland': 'Tetherland', 'abantether': 'AbanTether',
-        'global_stocks': 'Global Stocks', 'globalstoks': 'Global Stocks',
-        'stocks': 'Global Stocks', 'forex': 'Forex', 'macro': 'Macro', 'bonds': 'Bonds',
-        'wallstreet': 'Wall Street', 'iran_market': 'Iran Market', 'commodities': 'Commodities'
+        'global_stocks': 'Global Stocks', 'stocks': 'Stocks', 'forex': 'Forex',
+        'macro': 'Macro', 'bonds': 'Bonds', 'wallstreet': 'Wall Street', 'iran_market': 'IR_M'
     }
     return mapping.get((exchange_id or '').lower(), (exchange_id or 'Market').capitalize())
 
