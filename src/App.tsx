@@ -2914,24 +2914,25 @@ export default function App() {
                           : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-white">{rule.marketSymbol}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                      {/* Top Header: Symbol, Exchange, Price, Badge */}
+                      <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-800/50">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <span className="font-black text-xs text-white truncate">{rule.marketSymbol}</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono font-bold shrink-0">
                             {formatExchangeTag(rule.exchangeName)}
                           </span>
                           {rule.ttsEnabled && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 flex items-center gap-1 font-semibold" title="خوانش صوتی فعال">
-                              <Volume2 className="h-3 w-3" />
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-violet-500/20 text-violet-300 flex items-center gap-0.5 font-semibold shrink-0" title="خوانش صوتی فعال">
+                              <Volume2 className="h-2.5 w-2.5" />
                               <span>TTS</span>
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-sm text-white block">
+                        <div className="flex items-center gap-1.5 shrink-0" dir="ltr">
+                          <span className="font-mono font-black text-xs text-white block">
                             ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: currentPrice < 1 ? 4 : 2 })}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border font-mono ${badge.bgClass}`}>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border font-mono ${badge.bgClass}`}>
                             {badge.text}
                           </span>
                         </div>
@@ -2939,40 +2940,41 @@ export default function App() {
 
                       {/* Progress Bar & Status */}
                       <div className="space-y-1">
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-slate-400">
+                        <div className="flex items-center justify-between text-[10px] gap-2">
+                          <span className="text-slate-400 truncate">
                             شرط: {rule.conditionType === 'PRICE_THRESHOLD' ? `${rule.direction === 'ABOVE' ? '≥' : '≤'} $${rule.targetValue.toLocaleString()}` : `تغییر ${rule.targetValue}%`}
                           </span>
-                          <span className={`font-semibold ${isTriggered ? 'text-rose-400' : isNearTarget ? 'text-amber-400' : 'text-emerald-400'}`}>
-                            {isTriggered ? '🚨 فراخوانده شد' : isNearTarget ? `⚠️ ${targetProximity}% (نزدیک هدف)` : `پایش فعال • ${targetProximity}%`}
+                          <span className={`font-mono font-bold text-[9.5px] shrink-0 ${isTriggered ? 'text-rose-400' : isNearTarget ? 'text-amber-400' : 'text-emerald-400'}`} dir="ltr">
+                            {isTriggered ? 'Triggered' : isNearTarget ? `${targetProximity}% (Near)` : `${targetProximity}%`}
                           </span>
                         </div>
-                        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-500 ${
+                            className={`h-full rounded-full transition-all duration-300 ${
                               isTriggered ? 'bg-rose-500' : isNearTarget ? 'bg-amber-500' : 'bg-emerald-500'
                             }`}
-                            style={{ width: `${targetProximity}%` }}
+                            style={{ width: `${Math.max(4, targetProximity)}%` }}
                           />
                         </div>
                       </div>
 
-                      <div className="mt-2 pt-1.5 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
-                        <span>آخرین بررسی: {formatTimeAgo(rule.lastCheckedAt || new Date())}</span>
-                        <div className="flex items-center gap-2">
+                      {/* Footer Actions */}
+                      <div className="mt-2 pt-1 border-t border-slate-800/60 flex items-center justify-between text-[9.5px] text-slate-400">
+                        <span className="font-mono text-slate-400">{formatTimeAgo(rule.lastCheckedAt || new Date())}</span>
+                        <div className="flex items-center gap-1.5">
                           {rule.ttsEnabled && (
                             <button
                               onClick={() => testTtsSpeech(rule.baseCurrency, currentPrice)}
-                              className="text-violet-400 hover:text-violet-300 font-semibold flex items-center gap-1 cursor-pointer"
+                              className="text-violet-400 hover:text-violet-300 font-semibold flex items-center gap-0.5 cursor-pointer text-[9.5px]"
                             >
-                              <span>تست صدا</span>
+                              <span>صدا</span>
                             </button>
                           )}
                           <button
                             onClick={() => evaluateRule(rule, 1.5)}
-                            className="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer"
+                            className="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 font-bold cursor-pointer border border-emerald-500/30 text-[9.5px]"
                           >
-                            تست شبیه‌سازی
+                            تست
                           </button>
                         </div>
                       </div>
