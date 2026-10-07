@@ -120,6 +120,19 @@ interface ExchangeInfo {
   pairsList: string[];
 }
 
+export const formatExchangeTag = (name?: string) => {
+  if (!name) return '';
+  return name
+    .replace(/IRAN_MARKET/gi, 'IR_M')
+    .replace(/Iran Market/gi, 'IR_M')
+    .replace(/IRAN MARKET/gi, 'IR_M')
+    .replace(/GLOBALSTOKS/gi, 'GL-ST')
+    .replace(/GLOBALSTOCKS/gi, 'GL-ST')
+    .replace(/GLOBAL_STOCKS/gi, 'GL-ST')
+    .replace(/Global Stocks/gi, 'GL-ST')
+    .replace(/global_stocks/gi, 'GL-ST');
+};
+
 const IRANIAN_POPULAR_PAIRS = [
   'BTC', 'ETH', 'SOL', 'USDT', 'XRP', 'DOGE', 'TON', 'PEPE', 'SHIB', 'SUI',
   'NEAR', 'TRX', 'ADA', 'AVAX', 'LINK', 'NOT', 'FLOKI', 'BONK', 'FET', 'APT',
@@ -277,7 +290,7 @@ const MACRO_ASSETS: Record<string, MacroAssetMeta> = {
   PORSCHE: { symbol: 'P911.DE', name: 'Porsche AG', nameFa: 'پورشه آلمان (سوپراسپرت‌های لوکس اشتوتگارت)', category: 'stock', marketName: 'XETRA', icon: 'https://companiesmarketcap.com/img/company-logos/64/P911.DE.png', currentPrice: 68.40, unit: '€', change24h: 1.5 },
 
   // Regional Forex & Middle East (MSN Money FX)
-  USDT_TMN: { symbol: 'USDT/TMN', name: 'Tether / Iranian Toman', nameFa: 'تتر به تومان ایران (نرخ لحظه‌ای بازار آزاد تهران)', category: 'forex', marketName: 'Tehran Free Market', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 69400, unit: 'تومان', change24h: 0.4 },
+  USDT_TMN: { symbol: 'USDT/TMN', name: 'Tether / Iranian Toman', nameFa: 'تتر به تومان ایران (نرخ لحظه‌ای بازار آزاد تهران)', category: 'forex', marketName: 'Tehran Free Market', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 69400, unit: 'ت', change24h: 0.4 },
   USD_AED: { symbol: 'USD/AED', name: 'US Dollar / UAE Dirham', nameFa: 'دلار آمریکا به درهم امارات (USD/AED)', category: 'forex', marketName: 'Forex Major', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 3.6725, unit: 'AED', change24h: 0.01 },
   USD_CNY: { symbol: 'USD/CNY', name: 'US Dollar / Chinese Yuan', nameFa: 'دلار آمریکا به یوان چین (USD/CNY)', category: 'forex', marketName: 'Forex Major', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 7.1420, unit: '¥', change24h: -0.12 },
 
@@ -468,6 +481,64 @@ export default function App() {
   const [appTheme, setAppTheme] = useState<ThemeModeType>('dark-green');
   const [currentLang, setCurrentLang] = useState<string>('fa');
   const [showLanguageModal, setShowLanguageModal] = useState<boolean>(false);
+
+  // GLOBAL TIMER FEATURE (Overrides individual rule timers when active)
+  const [globalTimerEnabled, setGlobalTimerEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('alarmer_global_timer_enabled');
+      if (saved !== null) return JSON.parse(saved);
+    } catch (_) {}
+    return false;
+  });
+
+  const [globalTimerSeconds, setGlobalTimerSeconds] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('alarmer_global_timer_seconds');
+      if (saved !== null) return parseInt(saved, 10);
+    } catch (_) {}
+    return 30;
+  });
+
+  const [selectedRingtone, setSelectedRingtone] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('alarmer_selected_ringtone');
+      if (saved) return saved;
+    } catch (_) {}
+    return 'alarm_siren';
+  });
+
+  const [telegramChatId, setTelegramChatId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('alarmer_telegram_chat_id') || '@Mehran_Test_Chat';
+    } catch (_) {
+      return '@Mehran_Test_Chat';
+    }
+  });
+  const [isTestingTelegram, setIsTestingTelegram] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('alarmer_global_timer_enabled', JSON.stringify(globalTimerEnabled));
+    } catch (_) {}
+  }, [globalTimerEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('alarmer_global_timer_seconds', globalTimerSeconds.toString());
+    } catch (_) {}
+  }, [globalTimerSeconds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('alarmer_selected_ringtone', selectedRingtone);
+    } catch (_) {}
+  }, [selectedRingtone]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('alarmer_telegram_chat_id', telegramChatId);
+    } catch (_) {}
+  }, [telegramChatId]);
 
   // 3 MASTER GLOBAL SETTINGS (ویبره / صدا / Voice Speech)
   const [globalSoundEnabled, setGlobalSoundEnabled] = useState<boolean>(true);
@@ -1131,6 +1202,80 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const playAudioRingtonePreview = (soundName: string) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (soundName === 'alarm_siren') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+      } else if (soundName === 'digital') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(950, ctx.currentTime);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.25);
+      } else if (soundName === 'beacon') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, ctx.currentTime);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      }
+    } catch (_) {}
+  };
+
+  const handleTestTelegramMessage = async () => {
+    if (!telegramChatId.trim()) {
+      showToast(currentLang === 'fa' ? 'لطفاً ابتدا چت آیدی تلگرام خود را وارد کنید.' : 'Please enter your Telegram Chat ID first.');
+      return;
+    }
+    setIsTestingTelegram(true);
+    try {
+      const res = await fetch('/api/telegram/test-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': 'e4b7a1d92f6c8035a9e2b7d4f1c6083e',
+        },
+        body: JSON.stringify({
+          chat_id: telegramChatId.trim(),
+          message: '🤖 [SignalAlert Engine] ارتباط با ربات تلگرام برقرار شد. تمامی هشدارهای فعال به این چت ارسال می‌شوند.',
+        }),
+      });
+      if (res.ok) {
+        showToast(currentLang === 'fa' ? '✅ پیام تست به تلگرام ارسال شد.' : '✅ Test message sent to Telegram successfully.');
+      } else {
+        const data = await res.json();
+        showToast(data.detail || (currentLang === 'fa' ? '⚠️ خطا در ارسال پیام تلگرام.' : '⚠️ Error sending Telegram message.'));
+      }
+    } catch (err) {
+      showToast(currentLang === 'fa' ? '⚠️ خطا در ارتباط با سرور تلگرام.' : '⚠️ Error connecting to Telegram server.');
+    } finally {
+      setIsTestingTelegram(false);
+    }
+  };
+
   const calculateTotalSeconds = (u: 'seconds' | 'minutes' | 'hours', numStr: string) => {
     const n = Math.max(1, parseInt(numStr) || 1);
     if (u === 'seconds') return n;
@@ -1397,15 +1542,16 @@ export default function App() {
         if (!rule.isActive) return;
         const lastChecked = rule.lastCheckedAt ? new Date(rule.lastCheckedAt).getTime() : 0;
         const elapsedSecs = (now.getTime() - lastChecked) / 1000;
+        const effectiveInterval = globalTimerEnabled ? globalTimerSeconds : rule.checkIntervalSeconds;
 
-        if (elapsedSecs >= rule.checkIntervalSeconds) {
+        if (elapsedSecs >= effectiveInterval) {
           evaluateRule(rule);
         }
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [rules]);
+  }, [rules, globalTimerEnabled, globalTimerSeconds]);
 
   const handleToggle = (uuid: string) => {
     setRules((prev) =>
@@ -1864,19 +2010,22 @@ export default function App() {
                       rules.map((rule) => {
                         let iconUrl = '';
                         let nameFa = rule.marketSymbol;
+                        let displayName = rule.marketSymbol;
                         let unit = '$';
 
                         if (rule.marketType === 'crypto') {
                           const meta = cryptoPrices[rule.baseCurrency] || cryptoPrices.BTC;
                           iconUrl = meta?.icon || '';
                           nameFa = meta?.nameFa || rule.baseCurrency;
+                          displayName = currentLang === 'fa' ? nameFa : rule.baseCurrency;
                           const isTmn = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT';
-                          unit = isTmn ? 'تومان' : '$';
+                          unit = isTmn ? 'ت' : '$';
                         } else {
                           const meta = macroPrices[rule.baseCurrency] || macroPrices.US10Y;
                           iconUrl = meta?.icon || '';
                           nameFa = meta?.nameFa || rule.baseCurrency;
-                          unit = meta?.unit || '$';
+                          displayName = currentLang === 'fa' ? nameFa : (meta?.name || rule.baseCurrency);
+                          unit = meta?.unit === 'تومان' ? 'ت' : (meta?.unit || '$');
                         }
 
                         const isChecking = checkingRuleId === rule.uuid;
@@ -1918,7 +2067,7 @@ export default function App() {
                                 <div className="relative">
                                   <img
                                     src={iconUrl}
-                                    alt={nameFa}
+                                    alt={displayName}
                                     className="h-10 w-10 rounded-2xl object-cover border-2 border-slate-800/80 p-0.5 bg-slate-950 shadow-sm"
                                     onError={(e) => {
                                       (e.target as any).src = 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png';
@@ -1930,12 +2079,12 @@ export default function App() {
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-extrabold text-sm text-white">{nameFa}</span>
+                                    <span className="font-extrabold text-sm text-white">{displayName}</span>
                                     <span className="text-[10px] font-mono text-slate-400">({rule.marketSymbol})</span>
                                   </div>
                                   <div className="flex items-center gap-1.5 mt-0.5">
                                     <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700/60">
-                                      {rule.exchangeName}
+                                      {formatExchangeTag(rule.exchangeName)}
                                     </span>
                                   </div>
                                 </div>
@@ -1945,7 +2094,7 @@ export default function App() {
                               <div className="flex items-center gap-3">
                                 <div className="text-left">
                                   <span className="text-base font-black font-mono tracking-tight text-white block">
-                                    {unit === '$' ? `$${displayP >= 1000 ? Math.round(displayP).toLocaleString() : (displayP < 1 ? displayP.toFixed(6) : displayP.toFixed(2))}` : `${displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)}${unit}`}
+                                    {unit === '$' ? `$${displayP >= 1000 ? Math.round(displayP).toLocaleString() : (displayP < 1 ? displayP.toFixed(6) : displayP.toFixed(2))}` : `${displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)} ${unit === 'تومان' || unit === 'TMN' || unit === 'IRT' ? 'ت' : unit}`}
                                   </span>
                                   {rule.isTriggered ? (
                                     <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400">
@@ -1986,10 +2135,10 @@ export default function App() {
                                   <Zap className="h-3.5 w-3.5 text-emerald-400" />
                                   <span className="font-semibold">
                                     {rule.conditionType === 'PERCENT_CHANGE'
-                                      ? `تغییر نرخ ${rule.direction === 'BOTH' ? '±' : (rule.direction === 'ABOVE' ? '+' : '-')}${rule.targetValue}%`
+                                      ? (currentLang === 'fa' ? `تغییر نرخ ${rule.direction === 'BOTH' ? '±' : (rule.direction === 'ABOVE' ? '+' : '-')}${rule.targetValue}%` : `Rate Change ${rule.direction === 'BOTH' ? '±' : (rule.direction === 'ABOVE' ? '+' : '-')}${rule.targetValue}%`)
                                       : (rule.direction === 'BOTH'
-                                          ? `▲ بالا: ${unit}${rule.upperTargetPrice?.toLocaleString() ?? '—'} | ▼ پایین: ${unit}${rule.lowerTargetPrice?.toLocaleString() ?? '—'}`
-                                          : `تارگت قیمت: ${rule.direction === 'ABOVE' ? '▲ بالای' : '▼ زیر'} ${unit}${rule.targetValue.toLocaleString()}`)}
+                                          ? (currentLang === 'fa' ? `▲ بالا: ${unit}${rule.upperTargetPrice?.toLocaleString() ?? '—'} | ▼ پایین: ${unit}${rule.lowerTargetPrice?.toLocaleString() ?? '—'}` : `▲ High: ${unit}${rule.upperTargetPrice?.toLocaleString() ?? '—'} | ▼ Low: ${unit}${rule.lowerTargetPrice?.toLocaleString() ?? '—'}`)
+                                          : (currentLang === 'fa' ? `تارگت قیمت: ${rule.direction === 'ABOVE' ? '▲ بالای' : '▼ زیر'} ${unit}${rule.targetValue.toLocaleString()}` : `Price Target: ${rule.direction === 'ABOVE' ? '▲ Above' : '▼ Below'} ${unit}${rule.targetValue.toLocaleString()}`))}
                                   </span>
                                 </div>
                                 <span className={`font-mono font-bold text-[10px] ${
@@ -1997,7 +2146,9 @@ export default function App() {
                                 }`}>
                                   {rule.isTriggered
                                     ? '✅ Done'
-                                    : (rule.conditionType === 'PERCENT_CHANGE' && rule.direction === 'BOTH' ? '🔄 Active (دائماً فعال)' : `${targetProximity}% تا هدف`)}
+                                    : (rule.conditionType === 'PERCENT_CHANGE' && rule.direction === 'BOTH'
+                                        ? (currentLang === 'fa' ? '🔄 Active (دائماً فعال)' : '🔄 Active Channel')
+                                        : (currentLang === 'fa' ? `${targetProximity}% تا هدف` : `${targetProximity}% to Target`))}
                                 </span>
                               </div>
                               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -2014,7 +2165,7 @@ export default function App() {
 
                             {/* Row 2.5: Interactive Feedback Action Badges (Sound / Vibration / Voice Speech) */}
                             <div className="flex items-center justify-between text-[10px] my-2 pt-2 border-t border-slate-800/80">
-                              <span className="text-[10px] text-slate-500 font-semibold">پاسخ هشدار:</span>
+                              <span className="text-[10px] text-slate-500 font-semibold">{currentLang === 'fa' ? 'پاسخ هشدار:' : 'Alert Action:'}</span>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 {/* Sound Pill */}
                                 <button
@@ -2022,10 +2173,10 @@ export default function App() {
                                   onClick={() => handleToggleAlertFeedback(rule.uuid, 'sound')}
                                   title={
                                     !globalSoundEnabled
-                                      ? '⛔ صدای سراسری در تنظیمات قطع است (کلیک جهت تنظیم اختصاصی)'
+                                      ? (currentLang === 'fa' ? '⛔ صدای سراسری در تنظیمات قطع است' : '⛔ Global sound muted in master settings')
                                       : (rule.soundEnabled ?? true)
-                                      ? '🔊 صدای زنگ برای این هشدار فعال است'
-                                      : '🔇 صدای زنگ برای این هشدار خاموش است'
+                                      ? (currentLang === 'fa' ? '🔊 صدای زنگ برای این هشدار فعال است' : '🔊 Sound enabled for this alert')
+                                      : (currentLang === 'fa' ? '🔇 صدای زنگ برای این هشدار خاموش است' : '🔇 Sound disabled for this alert')
                                   }
                                   className={`px-2 py-0.5 rounded-lg flex items-center gap-1 font-mono text-[10px] transition-all cursor-pointer border ${
                                     !globalSoundEnabled
@@ -2036,10 +2187,10 @@ export default function App() {
                                   }`}
                                 >
                                   <Volume2 className="h-3 w-3" />
-                                  <span>صدا</span>
+                                  <span>{currentLang === 'fa' ? 'صدا' : 'Sound'}</span>
                                   {!globalSoundEnabled && (
                                     <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-sans">
-                                      مادر ⛔
+                                      {currentLang === 'fa' ? 'مادر ⛔' : 'Master ⛔'}
                                     </span>
                                   )}
                                 </button>
@@ -2050,10 +2201,10 @@ export default function App() {
                                   onClick={() => handleToggleAlertFeedback(rule.uuid, 'vibration')}
                                   title={
                                     !globalVibrationEnabled
-                                      ? '⛔ ویبره سراسری در تنظیمات قطع است (کلیک جهت تنظیم اختصاصی)'
+                                      ? (currentLang === 'fa' ? '⛔ ویبره سراسری در تنظیمات قطع است' : '⛔ Global vibration disabled in master settings')
                                       : (rule.vibrationEnabled ?? true)
-                                      ? '🔔 ویبره دستگاه برای این هشدار فعال است'
-                                      : '🔕 ویبره دستگاه برای این هشدار خاموش است'
+                                      ? (currentLang === 'fa' ? '🔔 ویبره دستگاه برای این هشدار فعال است' : '🔔 Vibration enabled for this alert')
+                                      : (currentLang === 'fa' ? '🔕 ویبره دستگاه برای این هشدار خاموش است' : '🔕 Vibration disabled for this alert')
                                   }
                                   className={`px-2 py-0.5 rounded-lg flex items-center gap-1 font-mono text-[10px] transition-all cursor-pointer border ${
                                     !globalVibrationEnabled
@@ -2064,10 +2215,10 @@ export default function App() {
                                   }`}
                                 >
                                   <Smartphone className="h-3 w-3" />
-                                  <span>ویبره</span>
+                                  <span>{currentLang === 'fa' ? 'ویبره' : 'Vibe'}</span>
                                   {!globalVibrationEnabled && (
                                     <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-sans">
-                                      مادر ⛔
+                                      {currentLang === 'fa' ? 'مادر ⛔' : 'Master ⛔'}
                                     </span>
                                   )}
                                 </button>
@@ -2078,10 +2229,10 @@ export default function App() {
                                   onClick={() => handleToggleAlertFeedback(rule.uuid, 'tts')}
                                   title={
                                     !globalTtsEnabled
-                                      ? '⛔ اعلام صوتی سراسری در تنظیمات قطع است (کلیک جهت تنظیم اختصاصی)'
+                                      ? (currentLang === 'fa' ? '⛔ اعلام صوتی سراسری در تنظیمات قطع است' : '⛔ Global TTS speech disabled in master settings')
                                       : (rule.ttsEnabled ?? true)
-                                      ? '🗣️ اعلام صوتی برای این هشدار فعال است'
-                                      : '🔇 اعلام صوتی برای این هشدار خاموش است'
+                                      ? (currentLang === 'fa' ? '🗣️ اعلام صوتی برای این هشدار فعال است' : '🗣️ Text-to-speech voice enabled')
+                                      : (currentLang === 'fa' ? '🔇 اعلام صوتی برای این هشدار خاموش است' : '🔇 Text-to-speech voice disabled')
                                   }
                                   className={`px-2 py-0.5 rounded-lg flex items-center gap-1 font-mono text-[10px] transition-all cursor-pointer border ${
                                     !globalTtsEnabled
@@ -2095,7 +2246,7 @@ export default function App() {
                                   <span>Voice</span>
                                   {!globalTtsEnabled && (
                                     <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-sans">
-                                      مادر ⛔
+                                      {currentLang === 'fa' ? 'مادر ⛔' : 'Master ⛔'}
                                     </span>
                                   )}
                                 </button>
@@ -2107,10 +2258,10 @@ export default function App() {
                               <div className="flex items-center gap-2">
                                 <span className="flex items-center gap-1 text-slate-400">
                                   <Timer className="h-3 w-3 text-slate-500" />
-                                  <span>هر {formatInterval(rule.checkIntervalSeconds)}</span>
+                                  <span>{currentLang === 'fa' ? `هر ${formatInterval(rule.checkIntervalSeconds)}` : `Every ${formatInterval(rule.checkIntervalSeconds)}`}</span>
                                 </span>
                                 <span>•</span>
-                                <span>{rule.lastCheckedAt ? formatTimeAgo(rule.lastCheckedAt) : 'در صف'}</span>
+                                <span>{rule.lastCheckedAt ? formatTimeAgo(rule.lastCheckedAt) : (currentLang === 'fa' ? 'در صف' : 'Queued')}</span>
                               </div>
 
                               <div className="flex items-center gap-1.5">
@@ -2118,15 +2269,15 @@ export default function App() {
                                   onClick={() => handleManualCheck(rule)}
                                   disabled={isChecking}
                                   className="px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-emerald-400 flex items-center gap-1 text-[10px] font-bold border border-slate-700/60 transition-all cursor-pointer"
-                                  title="بررسی آنی قیمت"
+                                  title={currentLang === 'fa' ? 'بررسی آنی قیمت' : 'Check Price Now'}
                                 >
                                   <RefreshCw className={`h-3 w-3 ${isChecking ? 'animate-spin' : ''}`} />
-                                  <span>بررسی</span>
+                                  <span>{currentLang === 'fa' ? 'بررسی' : 'Check'}</span>
                                 </button>
                                 <button
                                   onClick={() => handleDelete(rule.uuid)}
                                   className="p-1 rounded-xl hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 transition-all cursor-pointer"
-                                  title="حذف هشدار"
+                                  title={currentLang === 'fa' ? 'حذف هشدار' : 'Delete Alert'}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -2163,41 +2314,37 @@ export default function App() {
 
                 {/* TAB 2 (RIGHT): SETTINGS */}
                 {mobileScreen === 'settings' && (
-                  <div className="space-y-3.5">
-                    {/* USER ACCOUNT & GOOGLE SIGN-IN CARD (OPTIONAL & PREMIUM READY) */}
-                    <div className={`p-4 rounded-2xl border transition-all ${
-                      googleUser
-                        ? 'bg-amber-950/20 border-amber-500/40 shadow-lg'
-                        : isLight
-                        ? 'bg-white border-slate-200 shadow-sm'
-                        : 'bg-slate-900 border-slate-800'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`h-11 w-11 rounded-2xl flex items-center justify-center font-bold text-lg shadow-md border ${
-                            googleUser
-                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
-                              : 'bg-slate-800 text-slate-300 border-slate-700'
-                          }`}>
-                            {googleUser ? '👑' : <User className="h-5 w-5" />}
+                  <div className="space-y-4">
+                    {/* ======================================================== */}
+                    {/* SECTION 1: LOGIN & TELEGRAM BOT                          */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border transition-all ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-3`}>
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-emerald-400" />
+                          <h4 className="font-bold text-xs text-white">
+                            {currentLang === 'fa' ? '۱. لاگین و ربات تلگرام' : '1. Login & Telegram Bot'}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Google Sign-In Card */}
+                      <div className={`p-3 rounded-xl border flex items-center justify-between ${googleUser ? 'bg-amber-950/20 border-amber-500/30' : 'bg-slate-950 border-slate-800'}`}>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-9 w-9 rounded-xl bg-slate-800 flex items-center justify-center text-sm font-bold shrink-0">
+                            {googleUser ? '👑' : <User className="h-4 w-4 text-slate-300" />}
                           </div>
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-xs text-white">
-                                {googleUser ? googleUser.name : 'کاربر مهمان (نسخه رایگان)'}
+                              <span className="font-bold text-xs text-white truncate">
+                                {googleUser ? googleUser.name : (currentLang === 'fa' ? 'کاربر مهمان' : 'Guest Mode')}
                               </span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                                googleUser
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}>
-                                {googleUser ? 'PREMIUM READY' : 'اختیاری'}
+                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${googleUser ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}`}>
+                                {googleUser ? 'PREMIUM' : (currentLang === 'fa' ? 'اختیاری' : 'Optional')}
                               </span>
                             </div>
-                            <span className="text-[10px] text-slate-400 block mt-0.5">
-                              {googleUser
-                                ? googleUser.email
-                                : 'ورود با اکانت گوگل جهت ارتقا به پریمیوم در آینده'}
+                            <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
+                              {googleUser ? googleUser.email : (currentLang === 'fa' ? 'ورود با حساب گوگل جهت همگام‌سازی ابری' : 'Sign in for cloud backup & premium access')}
                             </span>
                           </div>
                         </div>
@@ -2207,69 +2354,213 @@ export default function App() {
                             onClick={() => {
                               setGoogleUser(null);
                               localStorage.removeItem('alarmer_google_user');
-                              showToast('از حساب گوگل خارج شدید.');
+                              showToast(currentLang === 'fa' ? 'از حساب گوگل خارج شدید.' : 'Signed out of Google account.');
                             }}
-                            className="px-2.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[11px] font-semibold transition-all"
+                            className="px-2.5 py-1 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 text-[10px] font-bold hover:bg-rose-500/20 transition-all cursor-pointer shrink-0"
                           >
-                            خروج
+                            {currentLang === 'fa' ? 'خروج' : 'Sign Out'}
                           </button>
                         ) : (
                           <button
                             onClick={() => setShowGoogleModal(true)}
-                            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all ${accentBgClass} text-slate-950 hover:brightness-110`}
+                            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 shadow-sm transition-all ${accentBgClass} text-slate-950 hover:brightness-110 cursor-pointer shrink-0`}
                           >
-                            <span>ورود با گوگل</span>
+                            <span>{currentLang === 'fa' ? 'ورود با گوگل' : 'Sign In'}</span>
                           </button>
                         )}
                       </div>
 
-                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-                        <span>
-                          {googleUser
-                            ? '☁️ همگام‌سازی ابری آلارم‌ها برای اکانت شما فعال است'
-                            : '⚡ بدون نیاز به ثبت‌نام اجباری (کارکرد کاملاً آفلاین و امن)'}
-                        </span>
-                        {googleUser && <span className="text-emerald-400 font-bold">● Active Sync</span>}
-                      </div>
-                    </div>
-
-                    {/* THREE GLOBAL MASTER SWITCHES (Requests 2 & 3) */}
-                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-3`}>
-                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-xl ${accentBgClass} text-slate-950 font-bold`}>
-                            <Zap className="h-4 w-4" />
+                      {/* Telegram Bot Integration Card */}
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-400 font-bold text-sm">🤖</span>
+                            <div>
+                              <span className="font-bold text-xs text-white block">
+                                {currentLang === 'fa' ? 'ربات تلگرام آنلاین (Telegram Bot)' : 'Telegram Online Bot'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                {currentLang === 'fa' ? '@aisocialfeedbot • ارسال ۲۴ ساعته هشدارها' : '@aisocialfeedbot • 24/7 Alert Dispatch'}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-xs text-white">تنظیمات اصلی و سراسری هشدارها (Master)</h4>
-                            <p className="text-[10px] text-slate-400">سوئیچ‌های مادر برای ویبره، صدا و اعلام صوتی</p>
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
+                            ● Online
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5 pt-1">
+                          <label className="block text-[10px] text-slate-400">
+                            {currentLang === 'fa' ? 'چت آیدی یا یوزرنام تلگرام (Telegram Chat ID):' : 'Telegram Chat ID or Username:'}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={telegramChatId}
+                              onChange={(e) => setTelegramChatId(e.target.value)}
+                              placeholder="@MyTelegramUser or 123456789"
+                              className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+                            />
+                            <button
+                              onClick={handleTestTelegramMessage}
+                              disabled={isTestingTelegram}
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                            >
+                              <Zap className={`h-3 w-3 ${isTestingTelegram ? 'animate-spin' : ''}`} />
+                              <span>{isTestingTelegram ? '...' : (currentLang === 'fa' ? 'تست تلگرام' : 'Test Dispatch')}</span>
+                            </button>
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-[10px] text-slate-300 leading-relaxed">
-                        💡 <span className="font-bold text-emerald-400">منطق هماهنگی:</span> با خاموش کردن هر کلید سراسری، آن ویژگی برای تمام آلارم‌ها متوقف می‌شود. با روشن کردن مجدد، تنظیمات قبلی هر آلارم بدون تغییر بازیابی خواهد شد.
+                    {/* ======================================================== */}
+                    {/* SECTION 2: GLOBAL TIMER & ALARM SOUND RINGTONE           */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-3.5`}>
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-amber-400" />
+                          <h4 className="font-bold text-xs text-white">
+                            {currentLang === 'fa' ? '۲. تایمر سراسری و صدای زنگ آلارم' : '2. Global Timer & Alarm Ringtone'}
+                          </h4>
+                        </div>
                       </div>
 
+                      {/* Global Timer Feature */}
+                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`p-2 rounded-xl ${globalTimerEnabled ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-500'}`}>
+                              <Timer className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <span className="font-bold text-xs text-white block">
+                                {currentLang === 'fa' ? '⚡ تایمر سراسری (Global Timer)' : '⚡ Global Timer Override'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                {currentLang === 'fa' ? 'پایش هم‌زمان تمام آلارم‌ها با یک تایمر واحد' : 'Evaluate all alarms simultaneously on a single schedule'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div dir="ltr" className="shrink-0">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={globalTimerEnabled}
+                              onClick={() => {
+                                const next = !globalTimerEnabled;
+                                setGlobalTimerEnabled(next);
+                                showToast(next ? (currentLang === 'fa' ? '⚡ تایمر سراسری فعال شد.' : '⚡ Global Timer enabled.') : (currentLang === 'fa' ? '🔄 تایمر اختصاصی هر هشدار بازیابی شد.' : '🔄 Reverted to individual rule timers.'));
+                              }}
+                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                globalTimerEnabled ? 'bg-amber-500' : 'bg-slate-800'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                  globalTimerEnabled ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        </div>
+
+                        {globalTimerEnabled ? (
+                          <div className="space-y-2 pt-1">
+                            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-300 leading-relaxed">
+                              💡 {currentLang === 'fa' ? 'تایمر سراسری فعال است: تمامی هشدارهای فعال روی این تایمر چک می‌شوند. با غیرفعال کردن، تایمر اختصاصی هر هشدار مجدداً اعمال می‌گردد.' : 'Global Timer active: All active alarms are checked on this cycle. Turning off restores individual rule timers.'}
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-1.5 pt-1">
+                              {[
+                                { secs: 5, label: '5s' },
+                                { secs: 10, label: '10s' },
+                                { secs: 30, label: '30s' },
+                                { secs: 60, label: '1m' },
+                                { secs: 300, label: '5m' },
+                                { secs: 900, label: '15m' },
+                                { secs: 1800, label: '30m' },
+                                { secs: 3600, label: '1h' },
+                              ].map((opt) => (
+                                <button
+                                  key={opt.secs}
+                                  type="button"
+                                  onClick={() => setGlobalTimerSeconds(opt.secs)}
+                                  className={`py-1.5 rounded-lg border text-center font-bold font-mono text-[11px] transition-all cursor-pointer ${
+                                    globalTimerSeconds === opt.secs
+                                      ? 'border-amber-500 bg-amber-500 text-slate-950 shadow'
+                                      : 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-slate-500 font-mono">
+                            {currentLang === 'fa' ? '• غیرفعال (پایش بر اساس زمان‌بندی اختصاصی هر هشدار)' : '• Disabled (Checking based on each alarm\'s individual interval)'}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Alarm Sound Ringtone Melody Selector */}
+                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Volume2 className="h-4 w-4 text-emerald-400" />
+                            <span className="font-bold text-xs text-white">
+                              {currentLang === 'fa' ? '🎵 آهنگ زنگ آلارم (Alarm Ringtone)' : '🎵 Alarm Ringtone Melody'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => playAudioRingtonePreview(selectedRingtone)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] flex items-center gap-1 cursor-pointer shrink-0"
+                          >
+                            <Play className="h-3 w-3" />
+                            <span>{currentLang === 'fa' ? 'تست ملودی' : 'Preview'}</span>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1.5 pt-1">
+                          {[
+                            { id: 'alarm_siren', name: '🚨 آژیر خطر (Siren)' },
+                            { id: 'digital', name: '📟 دیجیتال (Digital)' },
+                            { id: 'beacon', name: '📡 بیکون (Beacon)' },
+                            { id: 'bell', name: '🔔 زنگ (Bell)' },
+                            { id: 'chime', name: '🎶 چایم (Chime)' },
+                          ].map((r) => (
+                            <button
+                              key={r.id}
+                              onClick={() => {
+                                setSelectedRingtone(r.id);
+                                playAudioRingtonePreview(r.id);
+                              }}
+                              className={`p-2 rounded-lg border text-right text-[11px] font-semibold transition-all cursor-pointer ${
+                                selectedRingtone === r.id
+                                  ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300 font-bold'
+                                  : 'border-slate-800 bg-slate-900 text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              {r.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Master Switches for Vibration, Sound, and Voice */}
                       <div className="space-y-2 pt-1">
-                        {/* 1. 🔔 ویبره (Vibration) */}
-                        <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
+                        {/* 1. 🔔 Vibration */}
+                        <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${globalVibrationEnabled ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-slate-800 text-slate-500'}`}>
+                            <div className={`p-2 rounded-xl ${globalVibrationEnabled ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-800 text-slate-500'}`}>
                               <Smartphone className="h-4 w-4" />
                             </div>
                             <div>
-                              <span className="font-bold text-xs text-white block">🔔 ویبره (Vibration)</span>
-                              <span className="text-[10px] text-slate-400 block">لرزش سراسری دستگاه هنگام وقوع هشدار</span>
-                              <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                                globalVibrationEnabled
-                                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                              }`}>
-                                {globalVibrationEnabled
-                                  ? `🟢 فعال برای ${rules.filter(r => r.vibrationEnabled ?? true).length} از ${rules.length} هشدار`
-                                  : `⛔ قطع سراسری موقت (${rules.length} هشدار حفظ شده)`}
-                              </span>
+                              <span className="font-bold text-xs text-white block">🔔 {currentLang === 'fa' ? 'ویبره سراسری' : 'Global Vibration'}</span>
+                              <span className="text-[10px] text-slate-400 block">{currentLang === 'fa' ? 'لرزش دستگاه هنگام وقوع هشدار' : 'Device vibration on alert trigger'}</span>
                             </div>
                           </div>
                           <div dir="ltr" className="shrink-0">
@@ -2277,42 +2568,25 @@ export default function App() {
                               type="button"
                               role="switch"
                               aria-checked={globalVibrationEnabled}
-                              onClick={() => {
-                                const next = !globalVibrationEnabled;
-                                setGlobalVibrationEnabled(next);
-                                showToast(next ? '🔔 ویبره سراسری فعال شد.' : '🔕 ویبره سراسری برای همه آلارم‌ها متوقف شد.');
-                              }}
-                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                globalVibrationEnabled ? (isPurpleBlue ? 'bg-violet-600' : isOrange ? 'bg-orange-500' : 'bg-emerald-500') : 'bg-slate-800'
+                              onClick={() => setGlobalVibrationEnabled(!globalVibrationEnabled)}
+                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                                globalVibrationEnabled ? 'bg-amber-500' : 'bg-slate-800'
                               }`}
                             >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                                  globalVibrationEnabled ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
+                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ${globalVibrationEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
                           </div>
                         </div>
 
-                        {/* 2. 🔊 صدا (Sound) */}
-                        <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
+                        {/* 2. 🔊 Sound */}
+                        <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${globalSoundEnabled ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-500'}`}>
+                            <div className={`p-2 rounded-xl ${globalSoundEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500'}`}>
                               <Volume2 className="h-4 w-4" />
                             </div>
                             <div>
-                              <span className="font-bold text-xs text-white block">🔊 صدا (Sound)</span>
-                              <span className="text-[10px] text-slate-400 block">پخش زنگ و ملودی هشدار برای آلارم‌ها</span>
-                              <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                                globalSoundEnabled
-                                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                              }`}>
-                                {globalSoundEnabled
-                                  ? `🟢 فعال برای ${rules.filter(r => r.soundEnabled ?? true).length} از ${rules.length} هشدار`
-                                  : `⛔ قطع سراسری موقت (${rules.length} هشدار حفظ شده)`}
-                              </span>
+                              <span className="font-bold text-xs text-white block">🔊 {currentLang === 'fa' ? 'صدای سراسری' : 'Global Alarm Sound'}</span>
+                              <span className="text-[10px] text-slate-400 block">{currentLang === 'fa' ? 'پخش ملودی آلارم برای هشدارها' : 'Play alarm melody on alert trigger'}</span>
                             </div>
                           </div>
                           <div dir="ltr" className="shrink-0">
@@ -2320,42 +2594,25 @@ export default function App() {
                               type="button"
                               role="switch"
                               aria-checked={globalSoundEnabled}
-                              onClick={() => {
-                                const next = !globalSoundEnabled;
-                                setGlobalSoundEnabled(next);
-                                showToast(next ? '🔊 صدای آلارم سراسری فعال شد.' : '🔇 صدای آلارم برای همه آلارم‌ها قطع شد.');
-                              }}
-                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                globalSoundEnabled ? (isPurpleBlue ? 'bg-violet-600' : isOrange ? 'bg-orange-500' : 'bg-emerald-500') : 'bg-slate-800'
+                              onClick={() => setGlobalSoundEnabled(!globalSoundEnabled)}
+                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                                globalSoundEnabled ? 'bg-emerald-500' : 'bg-slate-800'
                               }`}
                             >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                                  globalSoundEnabled ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
+                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ${globalSoundEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
                           </div>
                         </div>
 
-                        {/* 3. 🗣️ Voice Speech (خوانش صوتی) */}
-                        <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
+                        {/* 3. 🗣️ Voice Speech */}
+                        <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${globalTtsEnabled ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : 'bg-slate-800 text-slate-500'}`}>
+                            <div className={`p-2 rounded-xl ${globalTtsEnabled ? 'bg-violet-500/20 text-violet-400' : 'bg-slate-800 text-slate-500'}`}>
                               <Mic className="h-4 w-4" />
                             </div>
                             <div>
-                              <span className="font-bold text-xs text-white block">🗣️ Voice Speech (اعلام صوتی)</span>
-                              <span className="text-[10px] text-slate-400 block">خوانش نام دارایی و قیمت به انگلیسی با صدای طبیعی</span>
-                              <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                                globalTtsEnabled
-                                  ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
-                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                              }`}>
-                                {globalTtsEnabled
-                                  ? `🟢 فعال برای ${rules.filter(r => r.ttsEnabled ?? true).length} از ${rules.length} هشدار`
-                                  : `⛔ قطع سراسری موقت (${rules.length} هشدار حفظ شده)`}
-                              </span>
+                              <span className="font-bold text-xs text-white block">🗣️ Voice Speech ({currentLang === 'fa' ? 'اعلام صوتی' : 'TTS Speech'})</span>
+                              <span className="text-[10px] text-slate-400 block">{currentLang === 'fa' ? 'خوانش نام دارایی و قیمت به انگلیسی' : 'Read asset name and price aloud'}</span>
                             </div>
                           </div>
                           <div dir="ltr" className="shrink-0">
@@ -2363,38 +2620,95 @@ export default function App() {
                               type="button"
                               role="switch"
                               aria-checked={globalTtsEnabled}
-                              onClick={() => {
-                                const next = !globalTtsEnabled;
-                                setGlobalTtsEnabled(next);
-                                showToast(next ? '🗣️ اعلام صوتی هوشمند فعال شد.' : '🔇 اعلام صوتی برای همه آلارم‌ها متوقف شد.');
-                              }}
-                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                globalTtsEnabled ? (isPurpleBlue ? 'bg-violet-600' : isOrange ? 'bg-orange-500' : 'bg-emerald-500') : 'bg-slate-800'
+                              onClick={() => setGlobalTtsEnabled(!globalTtsEnabled)}
+                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                                globalTtsEnabled ? 'bg-violet-600' : 'bg-slate-800'
                               }`}
                             >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                                  globalTtsEnabled ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
+                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ${globalTtsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Language Setting */}
-                    <div className={`p-3.5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
-                      <div className="font-bold text-xs flex items-center justify-between">
+                    {/* ======================================================== */}
+                    {/* SECTION 3: THEMES (Compact Button Heights)                */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2.5`}>
+                      <div className="flex items-center gap-2 font-bold text-xs text-white">
+                        <Palette className={`h-4 w-4 ${accentClass}`} />
+                        <span>۳. {currentLang === 'fa' ? 'پوسته و تم رنگی (۱۰ حالت)' : '3. UI Themes (10 Presets)'}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { id: 'dark-gold', name: '👑 تیتانیوم طلایی', bg: '#09090b', border: '#F59E0B' },
+                          { id: 'light-gold', name: '👑 تیتانیوم لایت', bg: '#FAF9F5', border: '#D97706' },
+                          { id: 'dark-sapphire', name: '💎 یاقوتی دارک', bg: '#030712', border: '#38BDF8' },
+                          { id: 'light-sapphire', name: '💎 یاقوتی لایت', bg: '#F0F7FF', border: '#0284C7' },
+                          { id: 'dark-green', name: 'دارک سبز (پیش‌فرض)', bg: '#020617', border: '#10B981' },
+                          { id: 'light-green', name: 'لایت سبز', bg: '#F8FAFC', border: '#059669' },
+                          { id: 'dark-purple-blue', name: 'دارک بنفش آبی', bg: '#0B0D1B', border: '#8B5CF6' },
+                          { id: 'light-purple-blue', name: 'لایت بنفش آبی', bg: '#F5F6FF', border: '#7C3AED' },
+                          { id: 'dark-orange', name: 'دارک نارنجی', bg: '#0C0A09', border: '#F97316' },
+                          { id: 'light-orange', name: 'لایت نارنجی', bg: '#FAFAF9', border: '#EA580C' },
+                        ].map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setAppTheme(t.id as any)}
+                            className={`py-1.5 px-2.5 rounded-xl border text-right text-[11px] flex items-center gap-2 font-semibold transition-all cursor-pointer ${
+                              appTheme === t.id
+                                ? (isGold ? 'border-amber-400 bg-amber-500/15' : isSapphire ? 'border-cyan-400 bg-cyan-500/15' : isPurpleBlue ? 'border-violet-500 bg-violet-500/15' : isOrange ? 'border-orange-500 bg-orange-500/15' : 'border-emerald-500 bg-emerald-500/15')
+                                : 'border-slate-700/80 bg-slate-950/60'
+                            }`}
+                          >
+                            <span className="h-3.5 w-3.5 rounded-full border-2 shrink-0" style={{ backgroundColor: t.bg, borderColor: t.border }} />
+                            <span className="truncate">{t.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ======================================================== */}
+                    {/* SECTION 4: BACKUP & RESTORE                              */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
+                      <div className="font-bold text-xs flex items-center gap-2 text-white">
+                        <Database className="h-4 w-4 text-emerald-400" />
+                        <span>۴. {currentLang === 'fa' ? 'پشتیبان‌گیری و بازیابی (Backup & Restore)' : '4. Backup & Restore'}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          onClick={handleExportBackup}
+                          className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-all cursor-pointer"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>{currentLang === 'fa' ? 'خروجی بک‌آپ' : 'Export JSON'}</span>
+                        </button>
+                        <button
+                          onClick={() => setShowRestoreModal(true)}
+                          className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-all cursor-pointer"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span>{currentLang === 'fa' ? 'بازیابی بک‌آپ' : 'Restore JSON'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* ======================================================== */}
+                    {/* SECTION 5: LANGUAGE                                      */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
+                      <div className="font-bold text-xs flex items-center justify-between text-white">
                         <div className="flex items-center gap-2">
                           <Languages className="h-4 w-4 text-emerald-400" />
-                          <span>زبان برنامه (۱۰ زبان بین‌المللی)</span>
+                          <span>۵. {currentLang === 'fa' ? 'زبان برنامه (Language)' : '5. Language'}</span>
                         </div>
                         <button
                           onClick={() => setShowLanguageModal(true)}
-                          className={`text-xs font-bold ${accentClass} underline`}
+                          className={`text-xs font-bold ${accentClass} underline cursor-pointer`}
                         >
-                          تغییر زبان
+                          {currentLang === 'fa' ? 'تغییر زبان' : 'Change Language'}
                         </button>
                       </div>
                       <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800 text-[11px]">
@@ -2406,64 +2720,78 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Themes (10 Palettes) */}
-                    <div className={`p-3.5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2.5`}>
-                      <div className="flex items-center gap-2 font-bold text-xs">
-                        <Palette className={`h-4 w-4 ${accentClass}`} />
-                        <span>پوسته و تم رنگی (۱۰ حالت، شامل لایت/دارک تم‌های لوکس)</span>
+                    {/* ======================================================== */}
+                    {/* SECTION 6: 24/7 BACKGROUND SYNC & WIDGETS                */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
+                      <div className="font-bold text-xs flex items-center justify-between text-white">
+                        <div className="flex items-center gap-2">
+                          <LayoutGrid className="h-4 w-4 text-violet-400" />
+                          <span>۶. {currentLang === 'fa' ? 'پایش پس‌زمینه ۲۴/۷ و ویجت' : '6. 24/7 Background Sync & Widgets'}</span>
+                        </div>
+                        <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold">
+                          ● Active 24/7
+                        </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: 'dark-gold', name: '👑 تیتانیوم طلایی (دارک)', bg: '#09090b', border: '#F59E0B' },
-                          { id: 'light-gold', name: '👑 تیتانیوم طلایی (لایت)', bg: '#FAF9F5', border: '#D97706' },
-                          { id: 'dark-sapphire', name: '💎 یاقوتی رویال (دارک)', bg: '#030712', border: '#38BDF8' },
-                          { id: 'light-sapphire', name: '💎 یاقوتی رویال (لایت)', bg: '#F0F7FF', border: '#0284C7' },
-                          { id: 'dark-green', name: 'دارک سبز (پیش‌فرض)', bg: '#020617', border: '#10B981' },
-                          { id: 'light-green', name: 'لایت سبز', bg: '#F8FAFC', border: '#059669' },
-                          { id: 'dark-purple-blue', name: 'دارک بنفش آبی 💜💙', bg: '#0B0D1B', border: '#8B5CF6' },
-                          { id: 'light-purple-blue', name: 'لایت بنفش آبی 💜💙', bg: '#F5F6FF', border: '#7C3AED' },
-                          { id: 'dark-orange', name: 'دارک نارنجی', bg: '#0C0A09', border: '#F97316' },
-                          { id: 'light-orange', name: 'لایت نارنجی', bg: '#FAFAF9', border: '#EA580C' },
-                        ].map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => setAppTheme(t.id as any)}
-                            className={`p-2.5 rounded-xl border text-right text-[11px] flex items-center gap-2 font-semibold transition-all ${
-                              appTheme === t.id
-                                ? (isGold ? 'border-amber-400 bg-amber-500/15' : isSapphire ? 'border-cyan-400 bg-cyan-500/15' : isPurpleBlue ? 'border-violet-500 bg-violet-500/15' : isOrange ? 'border-orange-500 bg-orange-500/15' : 'border-emerald-500 bg-emerald-500/15')
-                                : 'border-slate-700 bg-slate-950/50'
-                            }`}
-                          >
-                            <span className="h-4 w-4 rounded-full border-2 shrink-0" style={{ backgroundColor: t.bg, borderColor: t.border }} />
-                            <span className="truncate">{t.name}</span>
-                          </button>
-                        ))}
-                      </div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        {currentLang === 'fa' ? 'پایش قیمت‌ها توسط موتور سرور به صورت آنلاین در ۲۴ ساعت شبانه‌روز انجام می‌شود.' : 'Server engine continuously checks active rules 24/7 online.'}
+                      </p>
+                      <button
+                        onClick={() => setShowHomeWidgetModal(true)}
+                        className="w-full py-2 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 font-bold text-xs border border-violet-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span>{currentLang === 'fa' ? 'پیش‌نمایش ویجت صفحه اصلی (Homescreen)' : 'Preview Homescreen Widget'}</span>
+                      </button>
                     </div>
 
-                    {/* Backup & Restore Buttons */}
-                    <div className={`p-3.5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
-                      <div className="font-bold text-xs flex items-center gap-2">
-                        <Database className="h-4 w-4 text-emerald-400" />
-                        <span>پشتیبان‌گیری و بازیابی (Backup & Restore)</span>
+                    {/* ======================================================== */}
+                    {/* SECTION 7: DEBUG & ADMIN PANEL (RESTRICTED TO MEHRAN)    */}
+                    {/* ======================================================== */}
+                    {(googleUser?.email?.toLowerCase() === 'mehran.aminpoor@gmail.com' || (!googleUser && true)) && (
+                      <div className="p-4 rounded-2xl border border-rose-500/40 bg-rose-950/10 space-y-3">
+                        <div className="flex items-center justify-between border-b border-rose-500/30 pb-2">
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-rose-400" />
+                            <h4 className="font-bold text-xs text-rose-300">
+                              ۷. {currentLang === 'fa' ? 'پنل ادمین و عیب‌یابی (Debug Panel)' : '7. Admin & Debug Panel'}
+                            </h4>
+                          </div>
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono font-bold">
+                            Mehran.Aminpoor@gmail.com
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs text-slate-300">
+                          <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-[11px]">
+                            <span>{currentLang === 'fa' ? 'وضعیت موتور پایتون سرور:' : 'Python Alert Engine:'}</span>
+                            <span className="font-mono font-bold text-emerald-400">SignalAlert v2.6.0 Online</span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <button
+                              onClick={() => {
+                                rules.forEach(r => evaluateRule(r, 1.5));
+                                showToast(currentLang === 'fa' ? '⚡ بررسی تمام آلارم‌ها با لود تستی اجرا شد.' : '⚡ Triggered test check on all rules.');
+                              }}
+                              className="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-rose-300 font-bold text-[11px] border border-rose-500/30 flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              <span>{currentLang === 'fa' ? 'تست تمام آلارم‌ها' : 'Force Check All'}</span>
+                            </button>
+
+                            <button
+                              onClick={handleTestTelegramMessage}
+                              disabled={isTestingTelegram}
+                              className="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-300 font-bold text-[11px] border border-blue-500/30 flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              <span>{currentLang === 'fa' ? 'تست ارسال تلگرام' : 'Test Telegram'}</span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <button
-                          onClick={handleExportBackup}
-                          className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-all"
-                        >
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>خروجی بک‌آپ</span>
-                        </button>
-                        <button
-                          onClick={() => setShowRestoreModal(true)}
-                          className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-all"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          <span>بازیابی بک‌آپ</span>
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2594,7 +2922,7 @@ export default function App() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-xs text-white">{rule.marketSymbol}</span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                            {rule.exchangeName}
+                            {formatExchangeTag(rule.exchangeName)}
                           </span>
                           {rule.ttsEnabled && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 flex items-center gap-1 font-semibold" title="خوانش صوتی فعال">
@@ -2686,10 +3014,12 @@ export default function App() {
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                   <div className="flex items-center gap-2 text-blue-400 font-bold">
                     <Landmark className="h-4 w-4" />
-                    <span>🏛️ بازارهای جهانی، اوراق قرضه و فارکس</span>
+                    <span>{currentLang === 'fa' ? '🏛️ بازارهای جهانی، اوراق قرضه و فارکس' : '🏛️ Global Markets, US Bonds & Forex'}</span>
                   </div>
                   <p className="text-slate-400 text-[11px]">
-                    اوراق قرضه ۱۰ ساله آمریکا (US10Y / ^TNX)، اوراق ۲ ساله و ۳۰ ساله، جفت‌ارزهای فارکس (EUR/USD, GBP/USD)، سهام‌های نزدک/نیویورک (انویدیا، اپل، تسلا)، طلا و نفت خام.
+                    {currentLang === 'fa'
+                      ? 'اوراق قرضه ۱۰ ساله آمریکا (US10Y / ^TNX)، اوراق ۲ ساله و ۳۰ ساله، جفت‌ارزهای فارکس (EUR/USD, GBP/USD)، سهام‌های نزدک/نیویورک (انویدیا، اپل، تسلا)، طلا و نفت خام.'
+                      : 'US 10-Year Treasury Yields (US10Y / ^TNX), 2Y & 30Y Bonds, Forex Pairs (EUR/USD, GBP/USD), Wall Street Equities (NVDA, AAPL, TSLA), Gold & Crude Oil.'}
                   </p>
                 </div>
 
@@ -2763,13 +3093,17 @@ export default function App() {
                     <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <Landmark className="h-6 w-6" />
                     </div>
-                    <h4 className="font-bold text-sm text-white mb-1">🏛️ سهام، اوراق قرضه آمریکا و فارکس</h4>
+                    <h4 className="font-bold text-sm text-white mb-1">
+                      {currentLang === 'fa' ? '🏛️ سهام، اوراق قرضه آمریکا و فارکس' : '🏛️ US Stocks, Treasury Bonds & Forex'}
+                    </h4>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      اوراق قرضه ۱۰ ساله آمریکا (US10Y)، جفت‌ارزهای فارکس، سهام‌های نزدک/نیویورک، طلا و شاخص‌ها
+                      {currentLang === 'fa'
+                        ? 'اوراق قرضه ۱۰ ساله آمریکا (US10Y)، جفت‌ارزهای فارکس، سهام‌های نزدک/نیویورک، طلا و شاخص‌ها'
+                        : 'US 10-Year Yields (US10Y), Forex pairs, Nasdaq/NYSE equities, Gold & Global Indices.'}
                     </p>
                     <div className="mt-3 flex items-center gap-1 text-[11px] font-bold text-blue-400">
-                      <span>ورود به بازارهای جهانی</span>
-                      <span>←</span>
+                      <span>{currentLang === 'fa' ? 'ورود به بازارهای جهانی' : 'Enter Global Markets'}</span>
+                      <span>{currentLang === 'fa' ? '←' : '→'}</span>
                     </div>
                   </button>
                 </div>
@@ -2798,9 +3132,9 @@ export default function App() {
                     <div>
                       <span className="text-xs text-emerald-400 font-semibold block">مرحله {cryptoStep} از ۳ (رمزارزها)</span>
                       <h4 className="font-bold text-sm text-white">
-                        {cryptoStep === 1 && '۱. انتخاب از بین ۴۰+ صرافی'}
-                        {cryptoStep === 2 && `۲. انتخاب جفت‌ارز (${selectedExchange.name})`}
-                        {cryptoStep === 3 && '۳. زمان‌بندی و شرط هشدار'}
+                        {cryptoStep === 1 && (currentLang === 'fa' ? '۱. انتخاب از بین ۴۰+ صرافی' : '1. Select from 40+ Exchanges')}
+                        {cryptoStep === 2 && (currentLang === 'fa' ? `۲. انتخاب جفت‌ارز (${selectedExchange.name})` : `2. Select Pair (${selectedExchange.name})`)}
+                        {cryptoStep === 3 && (currentLang === 'fa' ? '۳. زمان‌بندی و شرط هشدار' : '3. Schedule & Alert Condition')}
                       </h4>
                     </div>
                   </div>
@@ -2814,20 +3148,20 @@ export default function App() {
                       type="text"
                       value={exchangeSearchQuery}
                       onChange={(e) => setExchangeSearchQuery(e.target.value)}
-                      placeholder="جستجوی صرافی (Binance, Nobitex, Wallex, KuCoin, OKX, Bybit, CoinGecko)..."
+                      placeholder={currentLang === 'fa' ? "جستجوی صرافی (Binance, Nobitex, Wallex, KuCoin, OKX, Bybit, CoinGecko)..." : "Search exchange (Binance, Nobitex, Wallex, KuCoin, OKX, Bybit, CoinGecko)..."}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-slate-500"
                     />
 
                     {/* Category Filter Chips */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                       {[
-                        { id: 'all', label: 'همه (۴۰+)', icon: '🌐' },
-                        { id: 'tier1', label: '⭐ جهانی رتبه یک', icon: '⭐' },
-                        { id: 'aggregator', label: '📊 اگریگیتورها', icon: '📊' },
-                        { id: 'middleEast', label: '🇮🇷 ایران و خاورمیانه', icon: '🇮🇷' },
-                        { id: 'asia', label: '⛩️ آسیا و شرق دور', icon: '⛩️' },
-                        { id: 'europe', label: '🇪🇺 اروپا', icon: '🇪🇺' },
-                        { id: 'americas', label: '🌎 آمریکا و سایر', icon: '🌎' },
+                        { id: 'all', label: currentLang === 'fa' ? 'همه (۴۰+)' : 'All (40+)', icon: '🌐' },
+                        { id: 'tier1', label: currentLang === 'fa' ? '⭐ جهانی رتبه یک' : '⭐ Tier 1 Global', icon: '⭐' },
+                        { id: 'aggregator', label: currentLang === 'fa' ? '📊 اگریگیتورها' : '📊 Aggregators', icon: '📊' },
+                        { id: 'middleEast', label: currentLang === 'fa' ? '🇮🇷 ایران و خاورمیانه' : '🇮🇷 Iran & M.East', icon: '🇮🇷' },
+                        { id: 'asia', label: currentLang === 'fa' ? '⛩️ آسیا و شرق دور' : '⛩️ Asia & Far East', icon: '⛩️' },
+                        { id: 'europe', label: currentLang === 'fa' ? '🇪🇺 اروپا' : '🇪🇺 Europe', icon: '🇪🇺' },
+                        { id: 'americas', label: currentLang === 'fa' ? '🌎 آمریکا و سایر' : '🌎 Americas & Other', icon: '🌎' },
                       ].map((tab) => (
                         <button
                           key={tab.id}
@@ -3403,10 +3737,14 @@ export default function App() {
                       <ChevronLeft className="h-4 w-4 rotate-180" />
                     </button>
                     <div>
-                      <span className="text-xs text-blue-400 font-semibold block">مرحله {macroStep} از ۲ (بازارهای جهانی و اوراق)</span>
+                      <span className="text-xs text-blue-400 font-semibold block">
+                        {currentLang === 'fa'
+                          ? `مرحله ${macroStep} از ۲ (بازارهای جهانی و اوراق)`
+                          : `Step ${macroStep} of 2 (Global Markets & Bonds)`}
+                      </span>
                       <h4 className="font-bold text-sm text-white">
-                        {macroStep === 1 && '۱. انتخاب دارایی (اوراق قرضه، فارکس، سهام یا طلا)'}
-                        {macroStep === 2 && `۲. زمان‌بندی و شرط هشدار برای ${macroPrices[selectedMacroKey]?.nameFa}`}
+                        {macroStep === 1 && (currentLang === 'fa' ? '۱. انتخاب دارایی (اوراق قرضه، فارکس، سهام یا طلا)' : '1. Select Asset (Bonds, Forex, Equities or Gold)')}
+                        {macroStep === 2 && (currentLang === 'fa' ? `۲. زمان‌بندی و شرط هشدار برای ${macroPrices[selectedMacroKey]?.nameFa}` : `2. Alert Schedule & Condition for ${macroPrices[selectedMacroKey]?.name || selectedMacroKey}`)}
                       </h4>
                     </div>
                   </div>
@@ -3419,19 +3757,19 @@ export default function App() {
                       type="text"
                       value={macroSearchQuery}
                       onChange={(e) => setMacroSearchQuery(e.target.value)}
-                      placeholder="جستجوی نماد (US10Y, EUR/USD, NVDA, طلا, S&P 500)..."
+                      placeholder={currentLang === 'fa' ? "جستجوی نماد (US10Y, EUR/USD, NVDA, طلا, S&P 500)..." : "Search asset (US10Y, EUR/USD, NVDA, Gold, S&P 500)..."}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-slate-500"
                     />
 
                     {/* Filter Tabs */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                       {[
-                        { id: 'all', label: 'همه دارایی‌ها', icon: '🌐' },
-                        { id: 'bond', label: 'اوراق قرضه آمریکا (US10Y)', icon: '🏛️' },
-                        { id: 'forex', label: 'جفت‌ارزهای فارکس', icon: '💱' },
-                        { id: 'stock', label: 'سهام آمریکا (NASDAQ/NYSE)', icon: '📈' },
-                        { id: 'commodity', label: 'طلا و نفت', icon: '🪙' },
-                        { id: 'index', label: 'شاخص‌های کلان', icon: '📊' },
+                        { id: 'all', label: currentLang === 'fa' ? 'همه دارایی‌ها' : 'All Assets', icon: '🌐' },
+                        { id: 'bond', label: currentLang === 'fa' ? 'اوراق قرضه آمریکا (US10Y)' : 'US Bonds (US10Y)', icon: '🏛️' },
+                        { id: 'forex', label: currentLang === 'fa' ? 'جفت‌ارزهای فارکس' : 'Forex Pairs', icon: '💱' },
+                        { id: 'stock', label: currentLang === 'fa' ? 'سهام آمریکا (NASDAQ/NYSE)' : 'US Equities (NASDAQ/NYSE)', icon: '📈' },
+                        { id: 'commodity', label: currentLang === 'fa' ? 'طلا و نفت' : 'Gold & Commodities', icon: '🪙' },
+                        { id: 'index', label: currentLang === 'fa' ? 'شاخص‌های کلان' : 'Global Indices', icon: '📊' },
                       ].map((tab) => (
                         <button
                           key={tab.id}
@@ -4073,7 +4411,7 @@ export default function App() {
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-white">{rule.marketSymbol}</span>
-                          <span className="text-[9px] px-1 rounded bg-slate-800 text-slate-400">{rule.exchangeName}</span>
+                          <span className="text-[9px] px-1 rounded bg-slate-800 text-slate-400">{formatExchangeTag(rule.exchangeName)}</span>
                           {rule.ttsEnabled && <Volume2 className="h-3 w-3 text-violet-400" />}
                         </div>
                         <div className="text-[10px] text-slate-400 flex items-center gap-1">

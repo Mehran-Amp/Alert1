@@ -1411,7 +1411,7 @@ def get_exchange_display_name(exchange_id: str) -> str:
         'coinex': 'CoinEx', 'okx': 'OKX', 'bybit': 'Bybit',
         'bitbarg': 'BitBarg', 'tetherland': 'Tetherland', 'abantether': 'AbanTether',
         'global_stocks': 'Global Stocks', 'stocks': 'Stocks', 'forex': 'Forex',
-        'macro': 'Macro', 'bonds': 'Bonds', 'wallstreet': 'Wall Street', 'iran_market': 'Iran Market'
+        'macro': 'Macro', 'bonds': 'Bonds', 'wallstreet': 'Wall Street', 'iran_market': 'IR_M'
     }
     return mapping.get((exchange_id or '').lower(), (exchange_id or 'Market').capitalize())
 
@@ -2019,7 +2019,7 @@ async def check_alerts_job():
             pct_str = f"{sign}{abs(((current_price - triggered_target) / triggered_target) * 100.0):.2f}%" if (triggered_target and triggered_target > 0) else ""
             price_formatted = f"${current_price:,.4f}".rstrip('0').rstrip('.') if current_price < 1 else f"${current_price:,.2f}"
             if alert.symbol.endswith('TMN') or alert.symbol.endswith('IRT'):
-                price_formatted = f"{int(current_price):,} TMN"
+                price_formatted = f"{int(current_price):,} ت"
             if '/' not in display_symbol:
                 for quote in ['USDT', 'USDC', 'BUSD', 'FDUSD', 'EUR', 'USD', 'TMN', 'IRT', 'BTC', 'ETH']:
                     if display_symbol.endswith(quote):
@@ -2462,24 +2462,6 @@ async def sync_user_alerts(payload: dict):
     await save_alerts_to_disk_async(ALERTS_DB)
     active_remaining = len([a for a in ALERTS_DB if a.is_active])
     print(f"🔄 [API] Bulk Synced {added_count} alert(s) for user {user_id} (Active remaining: {active_remaining})")
-
-    # Send Telegram confirmation message for newly synced alerts if chat_id is available
-    if http_client is not None:
-        try:
-            for new_alert in new_alerts:
-                effective_chat_id = (new_alert.telegram_chat_id or "").strip()
-                if not effective_chat_id:
-                    user_prof = USER_PROFILES_DB.get(new_alert.user_id.lower(), {})
-                    effective_chat_id = (user_prof.get('telegram_chat_id') or "").strip()
-                if not effective_chat_id and 'user_default' in USER_PROFILES_DB:
-                    effective_chat_id = (USER_PROFILES_DB['user_default'].get('telegram_chat_id') or "").strip()
-
-                if effective_chat_id:
-                    tg_conf_msg = format_alert_registered_telegram_msg(new_alert)
-                    _spawn(send_telegram_alert(http_client, effective_chat_id, tg_conf_msg))
-                    print(f"🤖 [Telegram Sync Confirmation] Sent for {new_alert.symbol} to chat {effective_chat_id}")
-        except Exception as e:
-            print(f"⚠️ [Telegram Sync Confirmation Note] {e}")
 
     return {"status": "synced", "count": added_count, "total_active": active_remaining}
 

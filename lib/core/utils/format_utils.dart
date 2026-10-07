@@ -46,7 +46,7 @@ class FormatUtils {
 
     if (isToman) {
       final tmnNumber = absPrice >= 1 ? _noDecimal.format(price) : formattedNumber;
-      return '$tmnNumber تومان';
+      return '$tmnNumber ت';
     }
     if (isRial) {
       final rialNumber = absPrice >= 1 ? _noDecimal.format(price) : formattedNumber;

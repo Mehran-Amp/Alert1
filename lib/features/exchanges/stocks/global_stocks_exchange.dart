@@ -36,8 +36,8 @@ class GlobalStocksExchange implements Exchange {
       'nameFa': 'شاخص کل ارزش بازار کریپتو (TOTAL)',
       'cat': 'CryptoMacro',
       'icon': '🌐',
-      'price': 2450.0, // Billion USD
-      'unit': 'Billion USD',
+      'price': 2450.0, // B USD
+      'unit': 'B USD',
     },
 {
       'symbol': 'TOTAL2',
@@ -45,8 +45,8 @@ class GlobalStocksExchange implements Exchange {
       'nameFa': 'شاخص بازار کریپتو منهای بیت‌کوین (TOTAL2)',
       'cat': 'CryptoMacro',
       'icon': '🔷',
-      'price': 1080.0, // Billion USD
-      'unit': 'Billion USD',
+      'price': 1080.0, // B USD
+      'unit': 'B USD',
     },
 {
       'symbol': 'TOTAL3',
@@ -54,8 +54,8 @@ class GlobalStocksExchange implements Exchange {
       'nameFa': 'شاخص آلت‌کوین‌ها منهای بیت‌کوین و اتریوم (TOTAL3)',
       'cat': 'CryptoMacro',
       'icon': '🚀',
-      'price': 685.0, // Billion USD
-      'unit': 'Billion USD',
+      'price': 685.0, // B USD
+      'unit': 'B USD',
     },
 {
       'symbol': 'BTC.D',
@@ -1896,17 +1896,17 @@ class GlobalStocksExchange implements Exchange {
             final usdtPct = (marketCapPct['usdt'] as num?)?.toDouble();
 
             double targetValue = 0.0;
-            String quoteUnit = 'Billion USD';
+            String quoteUnit = 'B USD';
 
             if (cleanSymbol == 'TOTAL') {
               targetValue = totalUsd / 1e9; // in Billions USD
-              quoteUnit = 'Billion USD';
+              quoteUnit = 'B USD';
             } else if (cleanSymbol == 'TOTAL2' && btcPct != null) {
               targetValue = (totalUsd * (100 - btcPct) / 100) / 1e9;
-              quoteUnit = 'Billion USD';
+              quoteUnit = 'B USD';
             } else if (cleanSymbol == 'TOTAL3' && btcPct != null && ethPct != null) {
               targetValue = (totalUsd * (100 - btcPct - ethPct) / 100) / 1e9;
-              quoteUnit = 'Billion USD';
+              quoteUnit = 'B USD';
             } else if (cleanSymbol == 'BTC.D' && btcPct != null) {
               targetValue = btcPct;
               quoteUnit = '%';

@@ -528,29 +528,28 @@ class ServerAlertService {
         body: jsonEncode(payload),
       ).timeout(const Duration(seconds: 10));
 
-      // Immediate direct Telegram confirmation dispatch when Telegram Chat ID is available
-      if (telegramChatId != null && telegramChatId.isNotEmpty) {
-        _dispatchDirectTelegramConfirmation(
-          chatId: telegramChatId,
-          symbol: symbol,
-          exchange: exchange,
-          targetPrice: targetPrice,
-          condition: condition,
-          conditionType: conditionType,
-          percent: percent,
-          checkIntervalSeconds: checkIntervalSeconds,
-          soundEnabled: soundEnabled,
-          vibrationEnabled: vibrationEnabled,
-          ttsEnabled: ttsEnabled,
-          triggerMode: triggerMode,
-          note: note ?? upperNote ?? lowerNote,
-        ).ignore();
-      }
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint('✅ Alert successfully created on Python server: ${response.body}');
         return true;
       } else {
+        // Fallback: Dispatch direct Telegram confirmation if server endpoint failed or was unreachable
+        if (telegramChatId != null && telegramChatId.isNotEmpty) {
+          _dispatchDirectTelegramConfirmation(
+            chatId: telegramChatId,
+            symbol: symbol,
+            exchange: exchange,
+            targetPrice: targetPrice,
+            condition: condition,
+            conditionType: conditionType,
+            percent: percent,
+            checkIntervalSeconds: checkIntervalSeconds,
+            soundEnabled: soundEnabled,
+            vibrationEnabled: vibrationEnabled,
+            ttsEnabled: ttsEnabled,
+            triggerMode: triggerMode,
+            note: note ?? upperNote ?? lowerNote,
+          ).ignore();
+        }
         debugPrint('❌ Failed to create alert on server: ${_parseErrorMessage(response)}');
       }
     } catch (e) {
