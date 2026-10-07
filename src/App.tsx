@@ -126,16 +126,22 @@ export const formatExchangeTag = (name?: string) => {
     .replace(/IRAN_MARKET/gi, 'IR_M')
     .replace(/Iran Market/gi, 'IR_M')
     .replace(/IRAN MARKET/gi, 'IR_M')
+    .replace(/iran_market/gi, 'IR_M')
     .replace(/GLOBALSTOKS/gi, 'GL-ST')
     .replace(/GLOBALSTOCKS/gi, 'GL-ST')
     .replace(/GLOBAL_STOCKS/gi, 'GL-ST')
     .replace(/Global Stocks/gi, 'GL-ST')
     .replace(/global_stocks/gi, 'GL-ST')
     .replace(/Global Commodities/gi, 'GL-ST')
+    .replace(/Global Markets/gi, 'GL-ST')
     .replace(/Global Market/gi, 'GL-ST')
     .replace(/Global Indices/gi, 'GL-ST')
+    .replace(/Commodities/gi, 'GL-ST')
+    .replace(/Pre-IPO Benchmark/gi, 'GL-ST')
     .replace(/Billion USD/gi, 'B USD')
-    .replace(/Billion/gi, 'B USD');
+    .replace(/BillionUSD/gi, 'B USD')
+    .replace(/Billion/gi, 'B USD')
+    .replace(/تومان/g, 'ت');
 };
 
 const IRANIAN_POPULAR_PAIRS = [
@@ -295,7 +301,7 @@ const MACRO_ASSETS: Record<string, MacroAssetMeta> = {
   PORSCHE: { symbol: 'P911.DE', name: 'Porsche AG', nameFa: 'پورشه آلمان (سوپراسپرت‌های لوکس اشتوتگارت)', category: 'stock', marketName: 'XETRA', icon: 'https://companiesmarketcap.com/img/company-logos/64/P911.DE.png', currentPrice: 68.40, unit: '€', change24h: 1.5 },
 
   // Regional Forex & Middle East (MSN Money FX)
-  USDT_TMN: { symbol: 'USDT/TMN', name: 'Tether / Iranian Toman', nameFa: 'تتر به تومان ایران (نرخ لحظه‌ای بازار آزاد تهران)', category: 'forex', marketName: 'Tehran Free Market', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 69400, unit: 'ت', change24h: 0.4 },
+  USDT_TMN: { symbol: 'USDT/TMN', name: 'Tether / Iranian Toman', nameFa: 'تتر به تومان ایران (نرخ لحظه‌ای بازار آزاد تهران)', category: 'forex', marketName: 'Tehran Free Market', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 69400, unit: 'تومان', change24h: 0.4 },
   USD_AED: { symbol: 'USD/AED', name: 'US Dollar / UAE Dirham', nameFa: 'دلار آمریکا به درهم امارات (USD/AED)', category: 'forex', marketName: 'Forex Major', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 3.6725, unit: 'AED', change24h: 0.01 },
   USD_CNY: { symbol: 'USD/CNY', name: 'US Dollar / Chinese Yuan', nameFa: 'دلار آمریکا به یوان چین (USD/CNY)', category: 'forex', marketName: 'Forex Major', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 7.1420, unit: '¥', change24h: -0.12 },
 
@@ -414,7 +420,7 @@ const INITIAL_RULES: AlertRule[] = [
     uuid: 'rule-gold-macro',
     marketType: 'stocks_macro',
     exchangeId: 'commodities',
-    exchangeName: 'GL-ST',
+    exchangeName: 'Global Stocks',
     baseCurrency: 'GOLD',
     counterCurrency: 'USD',
     marketSymbol: 'XAU/USD (طلا)',
@@ -1376,8 +1382,9 @@ export default function App() {
     let title = '';
     let body = '';
 
-    const priceStr = unit === 'تومان'
-      ? `${Math.round(newPrice).toLocaleString('fa-IR')} تومان`
+    const isTmnUnit = unit === 'تومان' || unit === 'TMN' || unit === 'IRT' || unit === 'ت';
+    const priceStr = isTmnUnit
+      ? `${Math.round(newPrice).toLocaleString('fa-IR')} ت`
       : `${unit}${newPrice.toLocaleString(undefined, { minimumFractionDigits: newPrice < 1 ? 4 : 2, maximumFractionDigits: 4 })}`;
 
     if (rule.conditionType === 'PERCENT_CHANGE') {
@@ -1444,7 +1451,7 @@ export default function App() {
       // Fires if real volume surged by requested threshold or simulated push
       if (volGrowth >= volReq || (forcedPriceDeltaPercent !== undefined && Math.abs(forcedPriceDeltaPercent) >= 1.0)) {
         triggered = true;
-        const volFormatted = currentVol >= 1e9 ? `$${(currentVol / 1e9).toFixed(2)} B USD` : `$${(currentVol / 1e6).toFixed(1)} M USD`;
+        const volFormatted = currentVol >= 1e9 ? `$${(currentVol / 1e9).toFixed(2)} Billion USD` : `$${(currentVol / 1e6).toFixed(1)} Million USD`;
         title = `📊 ${rule.marketSymbol} جهش حجم معاملات! ${volFormatted} ⚡`;
         body = rule.customNote && rule.customNote.trim()
           ? rule.customNote.trim()
@@ -1459,11 +1466,11 @@ export default function App() {
       const effectiveTts = globalTtsEnabled && (rule.ttsEnabled ?? false);
 
       let spokenPrice = newPrice.toLocaleString('fa-IR');
-      if (unit === 'تومان' && newPrice >= 1e9) {
+      if (isTmnUnit && newPrice >= 1e9) {
         spokenPrice = `${(newPrice / 1e9).toFixed(2)} میلیارد تومان`;
-      } else if (unit === 'تومان' && newPrice >= 1e6) {
+      } else if (isTmnUnit && newPrice >= 1e6) {
         spokenPrice = `${(newPrice / 1e6).toFixed(1)} میلیون تومان`;
-      } else if (unit === 'تومان') {
+      } else if (isTmnUnit) {
         spokenPrice = `${Math.round(newPrice).toLocaleString('fa-IR')} تومان`;
       } else {
         spokenPrice = `${spokenPrice} ${unit === '$' ? 'دلار' : unit}`;
@@ -2261,9 +2268,19 @@ export default function App() {
                             {/* Row 3: Modern Minimal Footer */}
                             <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
                               <div className="flex items-center gap-2">
-                                <span className="flex items-center gap-1 text-slate-400">
-                                  <Timer className="h-3 w-3 text-slate-500" />
-                                  <span>{currentLang === 'fa' ? `هر ${formatInterval(rule.checkIntervalSeconds)}` : `Every ${formatInterval(rule.checkIntervalSeconds)}`}</span>
+                                <span className="flex items-center gap-1">
+                                  <Timer className={`h-3 w-3 ${globalTimerEnabled ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
+                                  <span>
+                                    {globalTimerEnabled ? (
+                                      <span className="text-amber-300 font-bold bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                        ⚡ {currentLang === 'fa' ? `تایمر سراسری: هر ${formatInterval(globalTimerSeconds)}` : `Global Timer: Every ${formatInterval(globalTimerSeconds)}`}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400">
+                                        {currentLang === 'fa' ? `هر ${formatInterval(rule.checkIntervalSeconds)}` : `Every ${formatInterval(rule.checkIntervalSeconds)}`}
+                                      </span>
+                                    )}
+                                  </span>
                                 </span>
                                 <span>•</span>
                                 <span>{rule.lastCheckedAt ? formatTimeAgo(rule.lastCheckedAt) : (currentLang === 'fa' ? 'در صف' : 'Queued')}</span>
