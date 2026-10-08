@@ -326,9 +326,9 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
       </div>
 
       {/* Footer: Compact Toggle Chips (Sound, Vibe, Voice) + Interval & Actions */}
-      <div className="flex items-center justify-between text-[10px] pt-1 gap-1.5 flex-wrap min-w-0">
+      <div className="flex items-center justify-between text-[10px] pt-1 gap-1.5 flex-nowrap min-w-0">
         {/* Left: Feedback Notification Badges */}
-        <div className="flex items-center gap-1 min-w-0 flex-wrap">
+        <div className="flex items-center gap-1 min-w-0 flex-nowrap shrink-0">
           {/* Sound */}
           <button
             type="button"
