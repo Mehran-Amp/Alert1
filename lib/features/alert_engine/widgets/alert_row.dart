@@ -76,7 +76,7 @@ class AlertRow extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '${rule.baseCurrency} / ${rule.counterCurrency}',
+                    '${rule.baseCurrency} / ${FormatUtils.resolveCurrencyDisplayName(rule.counterCurrency, lang: lang)}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -266,14 +266,14 @@ class AlertRow extends StatelessWidget {
     switch (rule.conditionType) {
       case AlertConditionType.priceThreshold:
         if (rule.direction == AlertDirection.bothSides && rule.upperTargetPrice != null && rule.lowerTargetPrice != null) {
-          final upT = FormatUtils.formatAlertCardPrice(rule.upperTargetPrice!, rule.counterCurrency);
-          final lowT = FormatUtils.formatAlertCardPrice(rule.lowerTargetPrice!, rule.counterCurrency);
+          final upT = FormatUtils.formatAlertCardPrice(rule.upperTargetPrice!, rule.counterCurrency, lang: lang);
+          final lowT = FormatUtils.formatAlertCardPrice(rule.lowerTargetPrice!, rule.counterCurrency, lang: lang);
           if (lang == 'fa') {
             return 'عبور قیمت: بالا > $upT یا پایین < $lowT';
           }
           return 'Price breakout: > $upT or < $lowT';
         }
-        final target = FormatUtils.formatAlertCardPrice(rule.targetPrice ?? 0.0, rule.counterCurrency);
+        final target = FormatUtils.formatAlertCardPrice(rule.targetPrice ?? 0.0, rule.counterCurrency, lang: lang);
         final isAbove = rule.direction == AlertDirection.above;
         if (lang == 'fa') {
           return 'عبور قیمت ${isAbove ? 'به بالاتر از' : 'به پایین‌تر از'} $target';

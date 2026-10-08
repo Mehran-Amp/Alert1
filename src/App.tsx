@@ -140,6 +140,32 @@ export const formatExchangeTag = (name?: string) => {
     .replace(/Billion/gi, 'B USD');
 };
 
+export const formatScaledPrice = (price: number, unit?: string): string | null => {
+  if (!unit) return null;
+  const u = unit.trim().toUpperCase();
+  const bMatch = /^(B|BILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$/i.exec(u);
+  const mMatch = /^(M|MILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$/i.exec(u);
+  let scale = '';
+  let curr = 'USD';
+  if (bMatch) {
+    scale = 'B';
+    curr = bMatch[2] || 'USD';
+  } else if (mMatch) {
+    scale = 'M';
+    curr = mMatch[2] || 'USD';
+  }
+  if (!scale) return null;
+
+  const symMap: Record<string, string> = { EUR: '€', GBP: '£', JPY: '¥', CNY: '¥', BTC: '₿' };
+  const sym = symMap[curr.toUpperCase()] || '$';
+
+  const isNeg = price < 0;
+  const absP = Math.abs(price);
+  const numStr = absP >= 1000 ? absP.toLocaleString('en-US') : absP.toString();
+  const prefix = isNeg ? `-${sym}` : sym;
+  return `\u202A${prefix}${numStr}${scale}\u202C`;
+};
+
 const IRANIAN_POPULAR_PAIRS = [
   'BTC', 'ETH', 'SOL', 'USDT', 'XRP', 'DOGE', 'TON', 'PEPE', 'SHIB', 'SUI',
   'NEAR', 'TRX', 'ADA', 'AVAX', 'LINK', 'NOT', 'FLOKI', 'BONK', 'FET', 'APT',

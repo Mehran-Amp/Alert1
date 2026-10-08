@@ -305,14 +305,27 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   }
 
   String _formatSmartPrice(double price, String quoteCurrency) {
-    if (_flowType == MarketFlowType.iran || quoteCurrency == 'TMN' || quoteCurrency == 'IRT' || quoteCurrency == 'تومان') {
-      return FormatUtils.formatIranPrice(price, unit: 'ت');
+    // 1. Check for scaled currency abbreviation (e.g. quoteCurrency == 'Billion USD', 'B USD', 'M USD')
+    if (quoteCurrency == 'Billion USD' || quoteCurrency == 'B USD') {
+      return FormatUtils.formatScaledCurrencyPrice(price, 'B USD') ?? '\$${_formatSmartNumber(price)}B';
+    }
+    final scaled = FormatUtils.formatScaledCurrencyPrice(price, quoteCurrency);
+    if (scaled != null) {
+      return scaled;
+    }
+
+    final lang = context.read<SettingsService>().settings.language;
+    final upper = quoteCurrency.toUpperCase();
+    final isToman = upper == 'TMN' || upper == 'IRT' || upper == 'TOMAN' || quoteCurrency == 'تومان' || quoteCurrency == 'ت';
+    if (_flowType == MarketFlowType.iran || isToman) {
+      return FormatUtils.formatIranPrice(price, unit: quoteCurrency, lang: lang);
     }
     final numStr = _formatSmartNumber(price);
-    final isRials = quoteCurrency == 'IRR' || quoteCurrency == 'ریال';
+    final isRials = upper == 'IRR' || upper == 'RLS' || quoteCurrency == 'ریال';
     if (isRials) {
-      final faNum = FormatUtils.toPersianDigits(FormatUtils.formatPrice(price, showSymbol: false));
-      return '$faNum ریال';
+      final faNum = lang == 'fa' ? FormatUtils.toPersianDigits(FormatUtils.formatPrice(price, showSymbol: false, lang: lang)) : FormatUtils.formatPrice(price, showSymbol: false, lang: lang);
+      final rUnit = FormatUtils.resolveCurrencyDisplayName(quoteCurrency, lang: lang);
+      return '$faNum $rUnit';
     } else if (quoteCurrency == 'EUR') {
       return '€$numStr';
     } else if (quoteCurrency == 'GBP') {
@@ -323,8 +336,6 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       return '$numStr%';
     } else if (quoteCurrency == 'pts') {
       return '$numStr pts';
-    } else if (quoteCurrency == 'Billion USD' || quoteCurrency == 'B USD') {
-      return '\$$numStr B USD';
     } else if (quoteCurrency == 'JPY' || quoteCurrency == 'CNY') {
       return '¥$numStr';
     } else if (quoteCurrency == 'CHF') {
@@ -1986,8 +1997,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     } else if (_flowType == MarketFlowType.iran) {
       if (_selectedIranDomesticAsset != null) {
         assetName = (_selectedIranDomesticAsset!['nameFa'] as String?) ?? (_selectedIranDomesticAsset!['name'] as String? ?? '');
-        quoteCurrency = (_selectedIranDomesticAsset!['unit'] as String?) ?? 'تومان';
-        exchangeDisplayName = '🇮🇷 بازار تهران (تومان)';
+        quoteCurrency = (_selectedIranDomesticAsset!['unit'] as String?) ?? 'TMN';
+        final displayUnit = FormatUtils.resolveCurrencyDisplayName(quoteCurrency, lang: lang);
+        exchangeDisplayName = isFa ? '🇮🇷 بازار تهران ($displayUnit)' : '🇮🇷 Tehran Market ($displayUnit)';
       } else {
         assetName = _selectedPair?.displayName ?? '';
         quoteCurrency = _selectedPair?.counterCurrency ?? 'TMN';
@@ -2765,7 +2777,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
-                labelText: _flowType == MarketFlowType.iran ? 'قیمت هدف به تومان (ت)' : AppStrings.get('target_price_label', lang),
+                labelText: _flowType == MarketFlowType.iran ? (lang == 'fa' ? 'قیمت هدف به تومان' : 'Target Price (IRT)') : AppStrings.get('target_price_label', lang),
                 hintText: _flowType == MarketFlowType.iran ? (_currentPrice != null ? FormatUtils.toPersianDigits(_formatSmartNumber(_currentPrice!)) : '۲۷۰۰۰۰') : '95000',
                 filled: true,
                 fillColor: theme.colorScheme.surface,

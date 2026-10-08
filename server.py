@@ -305,8 +305,13 @@ class AlertPublic(BaseModel):
 
 DB_FILE = "alerts_data.json"
 
+def has_perso_arabic(s: str) -> bool:
+    """Checks if a string contains valid Persian or Arabic characters."""
+    return any(0x0600 <= ord(c) <= 0x06FF or 0xFB50 <= ord(c) <= 0xFEFF or ord(c) == 0x200C for c in s)
+
 def repair_mojibake(s: Optional[str]) -> Optional[str]:
-    """Repairs Mojibake corrupted Persian/Arabic strings (Ã, Ø, Ù, Â) up to 3 passes."""
+    """Repairs Mojibake corrupted Persian/Arabic strings (Ã, Ø, Ù, Â) up to 3 passes.
+    Guaranteed Anti-False-Positive: Only substitutes if Persian/Arabic characters are recovered."""
     if not s or not isinstance(s, str):
         return s
     current = s
@@ -320,7 +325,8 @@ def repair_mojibake(s: Optional[str]) -> Optional[str]:
         0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F
     }
     for _ in range(3):
-        if not any(c in current for c in 'ÃØÙÂ'):
+        mojibake_count_before = sum(1 for c in current if c in 'ÃØÙÂ')
+        if mojibake_count_before == 0:
             break
         bytes_list = []
         possible = True
@@ -337,7 +343,11 @@ def repair_mojibake(s: Optional[str]) -> Optional[str]:
             break
         try:
             decoded = bytes(bytes_list).decode('utf-8')
-            current = decoded
+            mojibake_count_after = sum(1 for c in decoded if c in 'ÃØÙÂ')
+            if has_perso_arabic(decoded) and mojibake_count_after < mojibake_count_before:
+                current = decoded
+            else:
+                break
         except UnicodeDecodeError:
             break
     return current
@@ -346,29 +356,69 @@ def load_alerts_from_disk() -> List[Alert]:
     for target in [DB_FILE, "alerts.json"]:
         if os.path.exists(target):
             try:
-                # Backup before loading and repairing
-                backup_file = f"{target}.bak"
-                if not os.path.exists(backup_file):
+                with open(target, "r", encoding="utf-8") as f:
+                    content_raw = f.read()
+
+                # Check for Mojibake before attempting repairs
+                has_mojibake = any(c in content_raw for c in 'ÃØÙÂ')
+                if has_mojibake:
                     try:
                         import shutil
-                        shutil.copy2(target, backup_file)
-                        print(f"📦 [Backup] Created initial backup: {backup_file}")
+                        from datetime import datetime
+                        # 1. Permanent initial backup (never overwritten)
+                        orig_bak = f"{target}.original_corrupted.bak"
+                        if not os.path.exists(orig_bak):
+                            shutil.copy2(target, orig_bak)
+                            print(f"📦 [Backup] Preserved original pre-repair backup: {orig_bak}")
+                        # 2. Timestamped backup
+                        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                        time_bak = f"{target}.backup_{ts}.bak"
+                        shutil.copy2(target, time_bak)
+                        print(f"📦 [Backup] Created timestamped backup: {time_bak}")
                     except Exception as be:
                         print(f"⚠️ [Backup] Warning backing up {target}: {be}")
-                with open(target, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    alerts = []
-                    for item in data:
-                        if isinstance(item, dict):
-                            for k in ['counter_currency', 'note', 'upper_note', 'lower_note', 'base_currency']:
-                                if item.get(k):
-                                    item[k] = repair_mojibake(item[k])
-                            if isinstance(item.get('raw_rule'), dict):
-                                for rk in ['counterCurrency', 'customNote', 'upperNote', 'lowerNote', 'unit']:
-                                    if item['raw_rule'].get(rk):
-                                        item['raw_rule'][rk] = repair_mojibake(item['raw_rule'][rk])
-                            alerts.append(Alert(**item))
-                    return alerts
+
+                data = json.loads(content_raw)
+                alerts = []
+                repaired_count = 0
+                for item in data:
+                    if isinstance(item, dict):
+                        item_was_repaired = False
+                        # Only repair text fields that could contain Persian, NEVER base_currency or symbol
+                        for k in ['counter_currency', 'note', 'upper_note', 'lower_note']:
+                            if item.get(k):
+                                rep = repair_mojibake(item[k])
+                                if rep != item[k]:
+                                    item[k] = rep
+                                    item_was_repaired = True
+                        if isinstance(item.get('raw_rule'), dict):
+                            for rk in ['counterCurrency', 'customNote', 'upperNote', 'lowerNote']:
+                                if item['raw_rule'].get(rk):
+                                    rep = repair_mojibake(item['raw_rule'][rk])
+                                    if rep != item['raw_rule'][rk]:
+                                        item['raw_rule'][rk] = rep
+                                        item_was_repaired = True
+                        if item_was_repaired:
+                            repaired_count += 1
+                        alerts.append(Alert(**item))
+
+                if repaired_count > 0:
+                    print(f"🛠️ [Startup Repair] Successfully repaired {repaired_count} alert(s) containing Mojibake to clean UTF-8.")
+                    try:
+                        repaired_json = json.dumps([a.model_dump() if hasattr(a, 'model_dump') else a.dict() for a in alerts], ensure_ascii=False, indent=2)
+                        tmp_target = f"{target}.tmp"
+                        with open(tmp_target, "w", encoding="utf-8") as f:
+                            f.write(repaired_json)
+                            f.flush()
+                            os.fsync(f.fileno())
+                        os.replace(tmp_target, target)
+                        print(f"💾 [Startup Repair] Atomically persisted {len(alerts)} clean alert(s) to {target}.")
+                    except Exception as pe:
+                        print(f"⚠️ [Startup Repair] Warning persisting repaired alerts: {pe}")
+                else:
+                    print(f"✅ [Startup Check] All {len(alerts)} alert(s) on disk are clean UTF-8 (no Mojibake repairs needed).")
+
+                return alerts
             except Exception as e:
                 print(f"⚠️ Error loading alerts disk DB: {e}")
     return []

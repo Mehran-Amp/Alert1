@@ -184,7 +184,7 @@ class AlertHomeWidgetView extends StatelessWidget {
   ) {
     final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
     final formattedPrice = currentPrice > 0
-        ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency)
+        ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency, lang: lang)
         : '—';
 
     // Check if one-shot condition fulfilled

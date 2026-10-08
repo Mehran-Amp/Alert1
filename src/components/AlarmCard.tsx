@@ -1,6 +1,6 @@
 import React from 'react';
 import { Volume2, Smartphone, Mic, Timer, RefreshCw, Trash2, Zap } from 'lucide-react';
-import { AlertRule, formatExchangeTag } from '../App';
+import { AlertRule, formatExchangeTag, formatScaledPrice } from '../App';
 import { FA } from '../i18n/fa';
 
 export interface AlarmCardProps {
@@ -47,6 +47,17 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   const isFa = currentLang === 'fa';
   let iconUrl = '';
   let displayName = rule.marketSymbol;
+  const resolveUnit = (curr: string) => {
+    const c = (curr || '').toUpperCase().trim();
+    if (c === 'TMN' || c === 'IRT' || c === 'TOMAN' || curr === '\u062A\u0648\u0645\u0627\u0646' || curr === '\u062A') {
+      return isFa ? FA.toman : 'IRT';
+    }
+    if (c === 'IRR' || c === 'RLS' || curr === '\u0631\u06CC\u0627\u0644') {
+      return isFa ? FA.rial : 'IRR';
+    }
+    return curr || '$';
+  };
+
   let unit = '$';
 
   if (rule.marketType === 'crypto') {
@@ -54,14 +65,13 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
     iconUrl = meta?.icon || '';
     const nameFa = meta?.nameFa || rule.baseCurrency;
     displayName = isFa ? nameFa : rule.baseCurrency;
-    const isTmn = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT';
-    unit = isTmn ? FA.tomanShort : '$';
+    unit = resolveUnit(rule.counterCurrency);
   } else {
     const meta = macroPrices[rule.baseCurrency] || macroPrices.US10Y;
     iconUrl = meta?.icon || '';
     const nameFa = meta?.nameFa || rule.baseCurrency;
     displayName = isFa ? nameFa : (meta?.name || rule.baseCurrency);
-    unit = meta?.unit === '\u062A\u0648\u0645\u0627\u0646' ? FA.tomanShort : (meta?.unit || '$');
+    unit = resolveUnit(meta?.unit || rule.counterCurrency || '$');
   }
 
   const isChecking = checkingRuleId === rule.uuid;
@@ -145,17 +155,18 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-right" dir="ltr">
             <div dir="ltr" className="text-[13px] font-black font-mono tracking-tight text-white leading-tight">
-              {unit === '$'
-                ? `$${
-                    displayP >= 1000
-                      ? Math.round(displayP).toLocaleString()
-                      : displayP < 1
-                      ? displayP.toFixed(5)
-                      : displayP.toFixed(2)
-                  }`
-                : `${
-                    displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)
-                  } ${unit}`}
+              {formatScaledPrice(displayP, rule.counterCurrency) ??
+                (unit === '$'
+                  ? `$${
+                      displayP >= 1000
+                        ? Math.round(displayP).toLocaleString()
+                        : displayP < 1
+                        ? displayP.toFixed(5)
+                        : displayP.toFixed(2)
+                    }`
+                  : `${
+                      displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)
+                    } ${unit}`)}
             </div>
             <div className="mt-0.5 flex justify-end" dir="ltr">
               {rule.isTriggered ? (
@@ -253,15 +264,23 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 <span>
                   {FA.target} {rule.direction === 'ABOVE' ? FA.above : FA.below}{' '}
                   <span dir="ltr" className="font-mono">
-                    {rule.targetValue.toLocaleString()}
-                  </span>{' '}
-                  {unit}
+                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ?? (
+                      <>
+                        {rule.targetValue.toLocaleString()} {unit}
+                      </>
+                    )}
+                  </span>
                 </span>
               ) : (
                 <span>
                   Target: {rule.direction === 'ABOVE' ? 'Above' : 'Below'}{' '}
                   <span dir="ltr" className="font-mono">
-                    {unit}{rule.targetValue.toLocaleString()}
+                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ?? (
+                      <>
+                        {unit}
+                        {rule.targetValue.toLocaleString()}
+                      </>
+                    )}
                   </span>
                 </span>
               )}

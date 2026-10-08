@@ -15,16 +15,21 @@ class NativeWidgetSyncService {
 
   static List<AlertRule> _cachedRules = [];
   static AppThemePalette _cachedPalette = AppThemePalette.darkGreen;
+  static String _cachedLang = 'fa';
 
   /// Sync list of rules (with optional theme palette) to native Android AppWidget
   static Future<void> syncAlerts(
     List<AlertRule> rules, {
     AppThemePalette? themePalette,
+    String? lang,
   }) async {
     try {
       _cachedRules = rules;
       if (themePalette != null) {
         _cachedPalette = themePalette;
+      }
+      if (lang != null && lang.isNotEmpty) {
+        _cachedLang = lang;
       }
 
       // Preserve exact order from app alerts list for all rules
@@ -32,7 +37,7 @@ class NativeWidgetSyncService {
         final symbol = rule.pair.displayName;
         final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
         final formattedPrice = currentPrice > 0
-            ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency)
+            ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency, lang: _cachedLang)
             : '—';
 
         // Check if one-shot condition is fulfilled / done

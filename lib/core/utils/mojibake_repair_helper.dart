@@ -33,19 +33,46 @@ class MojibakeRepairHelper {
     0x0178: 0x9F, // Ÿ
   };
 
+  /// Checks if a string contains at least one authentic Persian or Arabic Unicode character.
+  static bool containsPersoArabic(String s) {
+    for (int i = 0; i < s.length; i++) {
+      final code = s.codeUnitAt(i);
+      if ((code >= 0x0600 && code <= 0x06FF) ||
+          (code >= 0xFB50 && code <= 0xFEFF) ||
+          code == 0x200C) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Counts the presence of Mojibake sentinel characters in a string.
+  static int _countMojibakeChars(String s) {
+    int count = 0;
+    for (int i = 0; i < s.length; i++) {
+      final ch = s[i];
+      if (ch == 'Ã' || ch == 'Ø' || ch == 'Ù' || ch == 'Â') {
+        count++;
+      }
+    }
+    return count;
+  }
+
   /// Repairs corrupted strings (patterns containing Ã, Ø, Ù, Â) by converting Latin-1 / CP1252 to UTF-8
-  /// up to 3 passes, only substituting when the result is valid and improved.
+  /// up to 3 passes.
+  ///
+  /// CRITICAL ANTI-FALSE-POSITIVE GUARD:
+  /// Substitution is ONLY accepted if:
+  /// 1. The result produces valid Persian/Arabic characters (`containsPersoArabic == true`).
+  /// 2. Valid European text (e.g. "Ørsted", "São Paulo") is NEVER altered because it yields no Persian chars.
   static String? repair(String? input) {
     if (input == null || input.isEmpty) return input;
 
     String current = input;
 
     for (int pass = 0; pass < 3; pass++) {
-      // Check for Mojibake indicator pattern: Ã, Ø, Ù, Â
-      if (!current.contains('Ã') &&
-          !current.contains('Ø') &&
-          !current.contains('Ù') &&
-          !current.contains('Â')) {
+      final initialMojibakeCount = _countMojibakeChars(current);
+      if (initialMojibakeCount == 0) {
         break;
       }
 
@@ -70,10 +97,16 @@ class MojibakeRepairHelper {
 
       try {
         final decoded = utf8.decode(bytes);
-        // Valid UTF-8 string produced without throwing FormatException
-        current = decoded;
+
+        // Anti-False-Positive verification:
+        // Only accept if it actually recovered Persian/Arabic text and reduced/eliminated mojibake artifacts.
+        if (containsPersoArabic(decoded) && _countMojibakeChars(decoded) < initialMojibakeCount) {
+          current = decoded;
+        } else {
+          // If decoding didn't produce Persian/Arabic characters, abort pass to preserve legitimate European text
+          break;
+        }
       } catch (_) {
-        // If UTF-8 decode fails, keep current state and stop
         break;
       }
     }

@@ -33,17 +33,31 @@ class JsonAlertRuleRepository {
     try {
       final file = _file;
       if (await file.exists()) {
-        try {
-          final backupFile = File('${file.path}.bak');
-          if (!await backupFile.exists()) {
-            await file.copy(backupFile.path);
-            debugPrint('📦 [Backup] Created alerts backup at: ${backupFile.path}');
-          }
-        } catch (be) {
-          debugPrint('⚠️ [Backup] Warning backing up alerts file: $be');
-        }
         final content = await file.readAsString();
         if (content.trim().isNotEmpty) {
+          // Backup only if Mojibake corruption is detected before repair
+          final bool hasMojibake = content.contains('Ã') ||
+              content.contains('Ø') ||
+              content.contains('Ù') ||
+              content.contains('Â');
+
+          if (hasMojibake) {
+            try {
+              // 1. Permanent first-time original backup (never overwritten)
+              final initialBackup = File('$_storageDirectoryPath/alerts_original_corrupted.json.bak');
+              if (!await initialBackup.exists()) {
+                await file.copy(initialBackup.path);
+                debugPrint('📦 [Backup] Preserved original pre-repair backup: ${initialBackup.path}');
+              }
+              // 2. Timestamped backup
+              final ts = DateTime.now().toIso8601String().replaceAll(':', '-');
+              final timeBackup = File('$_storageDirectoryPath/alerts_backup_$ts.json');
+              await file.copy(timeBackup.path);
+              debugPrint('📦 [Backup] Created timestamped backup: ${timeBackup.path}');
+            } catch (be) {
+              debugPrint('⚠️ [Backup] Warning backing up alerts file: $be');
+            }
+          }
           final dynamic decoded = jsonDecode(content);
           if (decoded is Map<String, dynamic> && decoded['rules'] is List) {
             final rulesList = decoded['rules'] as List<dynamic>;

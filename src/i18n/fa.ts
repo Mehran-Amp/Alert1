@@ -38,6 +38,7 @@ export const FA = {
   second: '\u062B\u0627\u0646\u06CC\u0647',
   toman: '\u062A\u0648\u0645\u0627\u0646',
   tomanShort: '\u062A',
+  rial: '\u0631\u06CC\u0627\u0644',
 
   // Tooltips & Statuses
   soundEnabled: '\u0635\u062F\u0627\u06CC \u0632\u0646\u06AF \u0641\u0639\u0627\u0644 \u0627\u0633\u062A',

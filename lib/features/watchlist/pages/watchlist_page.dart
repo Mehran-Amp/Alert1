@@ -688,176 +688,205 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // === ROW 1: Hero Asset + Live Price + Switch ===
-                Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxLivePriceWidth = constraints.maxWidth * 0.42;
+                final prevPrice = rule.previousPrice ?? basePrice;
+                final showPrevious = prevPrice != null &&
+                    displayPrice != null &&
+                    (prevPrice - displayPrice).abs() > 1e-8;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                          width: 1.2,
+                    // === ROW 1: Hero Asset + Live Price + Switch ===
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: CryptoIcons.buildLogo(rule.baseCurrency, size: 36),
                         ),
-                      ),
-                      child: CryptoIcons.buildLogo(rule.baseCurrency, size: 36),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Flexible(
-                                child: Text(
-                                  rule.pair.displayName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 15,
-                                    color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      rule.pair.displayName,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 15,
+                                        color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
+                                  if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.edit_note_rounded, size: 15, color: theme.colorScheme.primary),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _getExchangeDisplayName(rule.exchangeId, lang).toUpperCase(),
+                                  maxLines: 1,
+                                  softWrap: false,
                                   overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ),
-                              if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
-                                const SizedBox(width: 4),
-                                Icon(Icons.edit_note_rounded, size: 15, color: theme.colorScheme.primary),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Live Price Column
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxLivePriceWidth),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (showPrevious) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 1.5),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: lang),
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'monospace',
+                                        decoration: TextDecoration.lineThrough,
+                                        color: textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  displayPrice != null ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: lang) : '---',
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: 'monospace',
+                                    color: rule.isActive
+                                        ? (changePercent != null && changePercent > 0.005
+                                            ? theme.colorScheme.primary
+                                            : (changePercent != null && changePercent < -0.005
+                                                ? AppTokens.negative
+                                                : theme.colorScheme.onSurface))
+                                        : textMuted,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              if (isTriggeredOneShot) ...[
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppTokens.warning.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
+                                    ),
+                                    child: const Text(
+                                      '✅ Done',
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTokens.warning,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ] else if (changePercent != null) ...[
+                                Builder(builder: (context) {
+                                  final cp = changePercent;
+                                  if (cp == null) return const SizedBox.shrink();
+                                  final isZero = cp.abs() < 0.005;
+                                  final isPositive = cp > 0.005;
+                                  final badgeColor = isZero
+                                      ? textMuted
+                                      : (isPositive ? AppTokens.positive : AppTokens.negative);
+                                  final badgeBg = isZero
+                                      ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
+                                      : badgeColor.withValues(alpha: 0.12);
+                                  final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
+
+                                  return FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: badgeBg,
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        '$prefix${cp.abs().toStringAsFixed(2)}%',
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'monospace',
+                                          color: badgeColor,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
                               ],
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              _getExchangeDisplayName(rule.exchangeId, lang).toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                                color: rule.isActive ? theme.colorScheme.primary : textMuted,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Live Price Column
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (rule.previousPrice != null || (basePrice != null && displayPrice != null && (basePrice - displayPrice).abs() > 1e-8)) ...[
-                          Builder(
-                            builder: (context) {
-                              final prev = rule.previousPrice ?? basePrice;
-                              if (prev == null) return const SizedBox.shrink();
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 1.5),
-                                child: Text(
-                                  FormatUtils.formatPrice(prev, currencySymbol: rule.counterCurrency),
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'monospace',
-                                    color: textMuted,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                        Text(
-                          displayPrice != null ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency) : '---',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            fontFamily: 'monospace',
-                            color: rule.isActive
-                                ? (changePercent != null && changePercent > 0.005
-                                    ? theme.colorScheme.primary
-                                    : (changePercent != null && changePercent < -0.005
-                                        ? AppTokens.negative
-                                        : theme.colorScheme.onSurface))
-                                : textMuted,
-                          ),
                         ),
-                        const SizedBox(height: 2),
-                        if (isTriggeredOneShot) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTokens.warning.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
-                            ),
-                            child: const Text(
-                              '✅ Done',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: AppTokens.warning,
-                              ),
-                            ),
-                          ),
-                        ] else if (changePercent != null) ...[
-                          Builder(builder: (context) {
-                            final cp = changePercent;
-                            if (cp == null) return const SizedBox.shrink();
-                            final isZero = cp.abs() < 0.005;
-                            final isPositive = cp > 0.005;
-                            final badgeColor = isZero
-                                ? textMuted
-                                : (isPositive ? AppTokens.positive : AppTokens.negative);
-                            final badgeBg = isZero
-                                ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
-                                : badgeColor.withValues(alpha: 0.12);
-                            final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
-
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: badgeBg,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                '$prefix${cp.abs().toStringAsFixed(2)}%',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'monospace',
-                                  color: badgeColor,
+                        const SizedBox(width: 6),
+                        Transform.scale(
+                          scale: 0.82,
+                          child: isTriggeredOneShot
+                              ? IconButton(
+                                  icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
+                                  onPressed: () => repository.rearmRule(rule.uuid),
+                                )
+                              : Switch(
+                                  value: rule.isActive,
+                                  activeThumbColor: Colors.white,
+                                  activeTrackColor: theme.colorScheme.primary,
+                                  onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
                                 ),
-                              ),
-                            );
-                          }),
-                        ],
+                        ),
                       ],
                     ),
-                    const SizedBox(width: 6),
-                    Transform.scale(
-                      scale: 0.82,
-                      child: isTriggeredOneShot
-                          ? IconButton(
-                              icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
-                              onPressed: () => repository.rearmRule(rule.uuid),
-                            )
-                          : Switch(
-                              value: rule.isActive,
-                              activeThumbColor: Colors.white,
-                              activeTrackColor: theme.colorScheme.primary,
-                              onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
-                            ),
-                    ),
-                  ],
-                ),
 
                 const SizedBox(height: 12),
 
@@ -1036,6 +1065,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   ],
                 ),
               ],
+            );
+          },
             ),
           ),
         ),
@@ -1228,8 +1259,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     switch (rule.conditionType) {
       case AlertConditionType.priceThreshold:
         if (rule.direction == AlertDirection.bothSides) {
-          final up = FormatUtils.formatPrice(rule.upperTargetPrice ?? 0, currencySymbol: rule.counterCurrency);
-          final down = FormatUtils.formatPrice(rule.lowerTargetPrice ?? 0, currencySymbol: rule.counterCurrency);
+          final up = FormatUtils.formatPrice(rule.upperTargetPrice ?? 0, currencySymbol: rule.counterCurrency, lang: lang);
+          final down = FormatUtils.formatPrice(rule.lowerTargetPrice ?? 0, currencySymbol: rule.counterCurrency, lang: lang);
           return isFa ? '▲ بالا: $up | ▼ پایین: $down' : '▲ Up: $up | ▼ Down: $down';
         }
         final String dirStr;
@@ -1240,7 +1271,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         } else {
           dirStr = lang == 'ckb' ? 'گەیشتن بە' : (isFa ? 'رسیدن به' : 'Reaches');
         }
-        return '$dirStr ${FormatUtils.formatPrice(rule.targetPrice ?? 0, currencySymbol: rule.counterCurrency)}';
+        return '$dirStr ${FormatUtils.formatPrice(rule.targetPrice ?? 0, currencySymbol: rule.counterCurrency, lang: lang)}';
 
       case AlertConditionType.percentChange:
         final p = rule.percent ?? 0;
@@ -1255,7 +1286,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         return '$dirStr ${p.toStringAsFixed(1)}%';
 
       case AlertConditionType.absolutePriceChange:
-        return '${lang == 'ckb' ? "گۆڕانکاری" : (isFa ? "تغییر" : "Changes by")} ${FormatUtils.formatPrice(rule.deltaAbsolute ?? 0, currencySymbol: rule.counterCurrency)}';
+        return '${lang == 'ckb' ? "گۆڕانکاری" : (isFa ? "تغییر" : "Changes by")} ${FormatUtils.formatPrice(rule.deltaAbsolute ?? 0, currencySymbol: rule.counterCurrency, lang: lang)}';
 
       case AlertConditionType.volumeChange:
         return '${lang == 'ckb' ? "هەڵکشانی قەبارە" : (isFa ? "جهش حجم" : "Volume jump")} ${(rule.volumePercent ?? 0).toStringAsFixed(1)}%';

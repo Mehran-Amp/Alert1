@@ -442,9 +442,9 @@ class AlertRule extends Equatable {
 
   factory AlertRule.fromJson(Map<String, dynamic> json) => AlertRule(
         uuid: json['uuid'] as String,
-        baseCurrency: repairMojibake(json['baseCurrency'] as String?) ?? (json['baseCurrency'] as String? ?? 'BTC'),
+        baseCurrency: json['baseCurrency'] as String,
         counterCurrency: repairMojibake(json['counterCurrency'] as String?) ?? (json['counterCurrency'] as String? ?? 'USDT'),
-        marketSymbol: repairMojibake(json['marketSymbol'] as String?) ?? (json['marketSymbol'] as String? ?? ''),
+        marketSymbol: json['marketSymbol'] as String,
         exchangeId: json['exchangeId'] as String,
         checkIntervalSeconds: json['checkIntervalSeconds'] as int? ?? 30,
         conditionType: AlertConditionType.values.byName(

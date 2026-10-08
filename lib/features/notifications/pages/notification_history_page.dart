@@ -352,7 +352,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                   Row(
                     children: [
                       Text(
-                        FormatUtils.formatPrice(log.previousPrice!),
+                        FormatUtils.formatPrice(log.previousPrice!, lang: lang),
                         style: TextStyle(
                           fontSize: 12,
                           fontFamily: 'monospace',
@@ -365,7 +365,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                         child: Icon(Icons.arrow_forward_rounded, size: 13, color: Colors.grey),
                       ),
                       Text(
-                        FormatUtils.formatPrice(log.triggeredPrice),
+                        FormatUtils.formatPrice(log.triggeredPrice, lang: lang),
                         style: TextStyle(
                           fontSize: 13,
                           fontFamily: 'monospace',
@@ -386,7 +386,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                         ),
                       ),
                       Text(
-                        FormatUtils.formatPrice(log.triggeredPrice),
+                        FormatUtils.formatPrice(log.triggeredPrice, lang: lang),
                         style: TextStyle(
                           fontSize: 13,
                           fontFamily: 'monospace',
@@ -519,7 +519,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                 onTap: () {
                   final textToCopy =
                       '🔔 ${log.marketSymbol} (${log.exchangeId.toUpperCase()})\n'
-                      'Price: ${FormatUtils.formatPrice(log.triggeredPrice)}\n'
+                      'Price: ${FormatUtils.formatPrice(log.triggeredPrice, lang: lang)}\n'
                       '${log.title}\n${log.message}\n'
                       'Time: ${log.timestamp}';
                   Clipboard.setData(ClipboardData(text: textToCopy));

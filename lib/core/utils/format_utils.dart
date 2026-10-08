@@ -7,22 +7,147 @@ class FormatUtils {
   static final NumberFormat _noDecimal = NumberFormat('#,###', 'en_US');
   static final NumberFormat _twoDecimal = NumberFormat('#,###.00', 'en_US');
 
+  /// Resolves currency symbol display name based on the current app language.
+  /// Rule:
+  /// - TMN, IRT, TOMAN, تومان, ت: "تومان" in Farsi (fa), "IRT" in all other languages.
+  /// - IRR, RLS, ریال: "ریال" in Farsi (fa), "IRR" in all other languages.
+  /// - Other currencies (USD, EUR, BTC, etc.): unchanged.
+  static String resolveCurrencyDisplayName(String? unit, {String lang = 'fa'}) {
+    if (unit == null || unit.trim().isEmpty) return '';
+    final trimmed = unit.trim();
+    final upper = trimmed.toUpperCase();
+
+    final isToman = upper == 'TMN' ||
+        upper == 'IRT' ||
+        upper == 'TOMAN' ||
+        trimmed == 'تومان' ||
+        trimmed == 'ت';
+
+    final isRial = upper == 'IRR' ||
+        upper == 'RLS' ||
+        trimmed == 'ریال';
+
+    final isFa = lang == 'fa';
+
+    if (isToman) {
+      return isFa ? 'تومان' : 'IRT';
+    }
+    if (isRial) {
+      return isFa ? 'ریال' : 'IRR';
+    }
+    return trimmed;
+  }
+
+  /// Formats scaled currency abbreviations like 'B USD', 'M USD', 'Billion USD'
+  /// without rounding or altering the original numerical precision of the price.
+  /// Format pattern: <CurrencySymbol><FormattedNumber><ScaleLetter> (e.g. $2,450.37B, -$1.2B)
+  static String? formatScaledCurrencyPrice(double price, String currencySymbol) {
+    final trimmed = currencySymbol.trim();
+    final upper = trimmed.toUpperCase();
+
+    // Check for Billion (B) or Million (M) scale indicators
+    String? scaleLetter;
+    String baseCurr = 'USD';
+
+    final bMatch = RegExp(r'^(B|BILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$', caseSensitive: false).firstMatch(upper);
+    final mMatch = RegExp(r'^(M|MILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$', caseSensitive: false).firstMatch(upper);
+    final bSuffixMatch = RegExp(r'^(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)\s*(B|BILLION)$', caseSensitive: false).firstMatch(upper);
+    final mSuffixMatch = RegExp(r'^(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)\s*(M|MILLION)$', caseSensitive: false).firstMatch(upper);
+
+    if (bMatch != null) {
+      scaleLetter = 'B';
+      baseCurr = (bMatch.group(2) ?? 'USD').toUpperCase();
+    } else if (mMatch != null) {
+      scaleLetter = 'M';
+      baseCurr = (mMatch.group(2) ?? 'USD').toUpperCase();
+    } else if (bSuffixMatch != null) {
+      scaleLetter = 'B';
+      baseCurr = bSuffixMatch.group(1)!.toUpperCase();
+    } else if (mSuffixMatch != null) {
+      scaleLetter = 'M';
+      baseCurr = mSuffixMatch.group(1)!.toUpperCase();
+    }
+
+    if (scaleLetter == null) {
+      return null;
+    }
+
+    String sym;
+    switch (baseCurr) {
+      case 'EUR': sym = '€'; break;
+      case 'GBP': sym = '£'; break;
+      case 'JPY':
+      case 'CNY': sym = '¥'; break;
+      case 'BTC': sym = '₿'; break;
+      case 'USD':
+      case 'USDT':
+      case 'USDC':
+      default: sym = '\$'; break;
+    }
+
+    // Exact precision with thousand separators without rounding
+    final absPrice = price.abs();
+    String formattedNum;
+    if (absPrice >= 1000) {
+      if (price == price.roundToDouble()) {
+        formattedNum = _noDecimal.format(price.toInt().abs());
+      } else {
+        final parts = absPrice.toString().split('.');
+        final intPart = _noDecimal.format(int.parse(parts[0]));
+        final decPart = parts.length > 1 ? parts[1] : '';
+        formattedNum = decPart.isNotEmpty ? '$intPart.$decPart' : intPart;
+      }
+    } else {
+      if (price == price.roundToDouble()) {
+        formattedNum = absPrice.toInt().toString();
+      } else {
+        formattedNum = absPrice.toString();
+      }
+    }
+
+    final isNegative = price < 0;
+    final prefix = isNegative ? '-$sym' : sym;
+    // Wrapped in LTR isolate (\u202A ... \u202C) so $ always stays locked in front in RTL contexts
+    return '\u202A$prefix$formattedNum$scaleLetter\u202C';
+  }
+
   /// Formats any double price with intelligent precision based on its scale:
   /// - Large assets (BTC, Gold, Indices >= $1,000): 2 decimals with thousand separators ($94,520.50)
   /// - Standard assets ($1 to $1,000): 2 decimals ($18.45)
   /// - Penny assets ($0.01 to $1): 4 decimals ($0.0452)
   /// - Micro assets ($0.0001 to $0.01): 6 decimals ($0.004210)
   /// - Nano assets (< $0.0001, e.g. PEPE, SHIB): up to 8 decimals ($0.00000845)
-  static String formatPrice(double price, {String? currencySymbol, bool showSymbol = true}) {
+  static String formatPrice(
+    double price, {
+    String? currencySymbol,
+    bool showSymbol = true,
+    String lang = 'fa',
+  }) {
     if (price.isNaN || price.isInfinite) return '0.00';
+
+    // 1. Check for scaled currency abbreviation (e.g. 'B USD', 'M USD', 'Billion USD')
+    if (showSymbol && currencySymbol != null && currencySymbol.isNotEmpty) {
+      final scaled = formatScaledCurrencyPrice(price, currencySymbol);
+      if (scaled != null) {
+        return scaled;
+      }
+    }
 
     String formattedNumber;
     final absPrice = price.abs();
 
     if (absPrice >= 1000) {
-      formattedNumber = _twoDecimal.format(price);
+      if (price == price.roundToDouble()) {
+        formattedNumber = _noDecimal.format(price);
+      } else {
+        formattedNumber = _twoDecimal.format(price);
+      }
     } else if (absPrice >= 1) {
-      formattedNumber = price.toStringAsFixed(2);
+      if (price == price.roundToDouble()) {
+        formattedNumber = price.toInt().toString();
+      } else {
+        formattedNumber = price.toStringAsFixed(2);
+      }
     } else if (absPrice >= 0.01) {
       formattedNumber = price.toStringAsFixed(4);
     } else if (absPrice >= 0.0001) {
@@ -40,39 +165,61 @@ class FormatUtils {
       return formattedNumber;
     }
 
+    final trimmed = currencySymbol.trim();
+    final upper = trimmed.toUpperCase();
+
     // Handle Persian / RTL counter currencies
-    final isToman = currencySymbol.toUpperCase() == 'TMN' || currencySymbol == 'تومان';
-    final isRial = currencySymbol.toUpperCase() == 'IRR' || currencySymbol == 'ریال' || currencySymbol.toUpperCase() == 'RLS';
+    final isToman = upper == 'TMN' ||
+        upper == 'IRT' ||
+        upper == 'TOMAN' ||
+        trimmed == 'تومان' ||
+        trimmed == 'ت';
+
+    final isRial = upper == 'IRR' ||
+        upper == 'RLS' ||
+        trimmed == 'ریال';
 
     if (isToman) {
       final tmnNumber = absPrice >= 1 ? _noDecimal.format(price) : formattedNumber;
-      return '$tmnNumber ت';
+      final displayUnit = resolveCurrencyDisplayName(currencySymbol, lang: lang);
+      return '$tmnNumber $displayUnit';
     }
     if (isRial) {
       final rialNumber = absPrice >= 1 ? _noDecimal.format(price) : formattedNumber;
-      return '$rialNumber ریال';
+      final displayUnit = resolveCurrencyDisplayName(currencySymbol, lang: lang);
+      return '$rialNumber $displayUnit';
     }
 
-    // Universal symbols
-    switch (currencySymbol.toUpperCase()) {
+    final isNegative = price < 0;
+    final cleanNum = isNegative && formattedNumber.startsWith('-')
+        ? formattedNumber.substring(1)
+        : formattedNumber;
+
+    // Universal symbols: always lock symbol to front using LTR isolate
+    switch (upper) {
       case 'USD':
       case 'USDT':
       case 'USDC':
-        return '\$$formattedNumber';
+        return isNegative ? '\u202A-\$$cleanNum\u202C' : '\u202A\$$formattedNumber\u202C';
       case 'EUR':
-        return '€$formattedNumber';
+        return isNegative ? '\u202A-€$cleanNum\u202C' : '\u202A€$formattedNumber\u202C';
       case 'GBP':
-        return '£$formattedNumber';
+        return isNegative ? '\u202A-£$cleanNum\u202C' : '\u202A£$formattedNumber\u202C';
       case 'JPY':
       case 'CNY':
-        return '¥$formattedNumber';
+        return isNegative ? '\u202A-¥$cleanNum\u202C' : '\u202A¥$formattedNumber\u202C';
       case 'BTC':
-        return '₿$formattedNumber';
+        return isNegative ? '\u202A-₿$cleanNum\u202C' : '\u202A₿$formattedNumber\u202C';
       case 'SAT':
       case 'SATOSHI':
         return '${_noDecimal.format(price)} sats';
       default:
-        return '$formattedNumber $currencySymbol';
+        // Rule 5: If unknown currency is non-Latin or length > 6, do not append to price
+        final isCleanLatin = RegExp(r'^[A-Za-z0-9%$#€£¥₿]+$').hasMatch(trimmed);
+        if (trimmed.length > 6 || !isCleanLatin) {
+          return formattedNumber;
+        }
+        return '$formattedNumber $trimmed';
     }
   }
 
@@ -116,9 +263,12 @@ class FormatUtils {
     return result;
   }
 
-  /// Formats prices specifically for the Iran Market UI (100% Persian digits with 'ت' or 'تومان')
-  static String formatIranPrice(double price, {String unit = 'ت'}) {
-    if (price.isNaN || price.isInfinite) return '۰ $unit';
+  /// Formats prices specifically for the Iran Market UI (respects lang for unit & digits)
+  static String formatIranPrice(double price, {String unit = 'TMN', String lang = 'fa'}) {
+    final displayUnit = resolveCurrencyDisplayName(unit, lang: lang);
+    if (price.isNaN || price.isInfinite) {
+      return (lang == 'fa') ? '۰ $displayUnit' : '0 $displayUnit';
+    }
     final absPrice = price.abs();
     String formattedEn;
     if (absPrice >= 1000) {
@@ -128,25 +278,31 @@ class FormatUtils {
     } else {
       formattedEn = price.toStringAsFixed(4);
     }
-    final faNum = toPersianDigits(formattedEn);
-    return '$faNum $unit';
+    final numStr = (lang == 'fa') ? toPersianDigits(formattedEn) : formattedEn;
+    return '$numStr $displayUnit';
   }
 
-  /// Formats prices for Alert List / Card rows in English digits with 'T' (e.g. 268,500 T)
-  static String formatAlertCardPrice(double price, String quoteCurrency) {
-    final isToman = quoteCurrency.toUpperCase() == 'TMN' ||
-        quoteCurrency.toUpperCase() == 'IRT' ||
-        quoteCurrency == 'تومان' ||
-        quoteCurrency.toUpperCase() == 'IRR' ||
-        quoteCurrency.toUpperCase() == 'RLS' ||
-        quoteCurrency == 'ریال';
-    if (isToman) {
+  /// Formats prices for Alert List / Card rows with dynamic language sensitivity
+  static String formatAlertCardPrice(double price, String quoteCurrency, {String lang = 'fa'}) {
+    final trimmed = quoteCurrency.trim();
+    final upper = trimmed.toUpperCase();
+    final isToman = upper == 'TMN' ||
+        upper == 'IRT' ||
+        upper == 'TOMAN' ||
+        trimmed == 'تومان' ||
+        trimmed == 'ت';
+    final isRial = upper == 'IRR' ||
+        upper == 'RLS' ||
+        trimmed == 'ریال';
+
+    if (isToman || isRial) {
       final numStr = price >= 1000
           ? _noDecimal.format(price)
           : (price == price.roundToDouble() ? price.toInt().toString() : price.toStringAsFixed(2));
-      return '$numStr T';
+      final displayUnit = resolveCurrencyDisplayName(quoteCurrency, lang: lang);
+      return '$numStr $displayUnit';
     }
-    return formatPrice(price, currencySymbol: quoteCurrency);
+    return formatPrice(price, currencySymbol: quoteCurrency, lang: lang);
   }
 
   /// Formats volume with compact SI units (K, M, B)
