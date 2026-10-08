@@ -76,7 +76,25 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   }
 
   const isChecking = checkingRuleId === rule.uuid;
-  const displayP = rule.lastCheckedPrice ?? rule.basePrice;
+  let rawDisplayP = rule.lastCheckedPrice ?? rule.basePrice;
+  let rawBaseP = rule.basePrice;
+  let rawTargetV = rule.targetValue;
+  let rawUpperP = rule.upperTargetPrice;
+  let rawLowerP = rule.lowerTargetPrice;
+
+  // Safety net: Normalize any raw Rial values (> 1M for USDT on Iranian exchanges) to Tomans
+  if (unit === 'تومان' || (rule.exchangeId && (rule.exchangeId.toLowerCase().includes('nobitex') || rule.exchangeId.toLowerCase().includes('bonbast')))) {
+    unit = 'تومان';
+    if (rule.baseCurrency === 'USDT' || rule.marketSymbol.startsWith('USDT')) {
+      if (rawDisplayP > 1000000) rawDisplayP = Math.round(rawDisplayP / 10.0);
+      if (rawBaseP > 1000000) rawBaseP = Math.round(rawBaseP / 10.0);
+      if (rawTargetV > 1000000) rawTargetV = Math.round(rawTargetV / 10.0);
+      if (rawUpperP && rawUpperP > 1000000) rawUpperP = Math.round(rawUpperP / 10.0);
+      if (rawLowerP && rawLowerP > 1000000) rawLowerP = Math.round(rawLowerP / 10.0);
+    }
+  }
+
+  const displayP = rawDisplayP;
 
   // Market 24h Meta & Effective Percentage Calculation
   const marketMeta =
@@ -268,22 +286,22 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                   <span>
                     {FA.high}{' '}
                     <span dir="ltr" className="font-mono">
-                      {rule.upperTargetPrice?.toLocaleString() ?? '—'}
+                      {rawUpperP?.toLocaleString() ?? '—'}
                     </span>{' '}
                     | {FA.low}{' '}
                     <span dir="ltr" className="font-mono">
-                      {rule.lowerTargetPrice?.toLocaleString() ?? '—'}
+                      {rawLowerP?.toLocaleString() ?? '—'}
                     </span>
                   </span>
                 ) : (
                   <span>
                     High:{' '}
                     <span dir="ltr" className="font-mono">
-                      {rule.upperTargetPrice?.toLocaleString() ?? '—'}
+                      {rawUpperP?.toLocaleString() ?? '—'}
                     </span>{' '}
                     | Low:{' '}
                     <span dir="ltr" className="font-mono">
-                      {rule.lowerTargetPrice?.toLocaleString() ?? '—'}
+                      {rawLowerP?.toLocaleString() ?? '—'}
                     </span>
                   </span>
                 )
@@ -291,12 +309,12 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 <span>
                   {FA.target} {rule.direction === 'ABOVE' ? FA.above : FA.below}{' '}
                   <span dir="ltr" className="font-mono">
-                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ??
+                    {formatScaledPrice(rawTargetV, rule.counterCurrency) ??
                       (rule.counterCurrency === '%' || unit === '%' ? (
-                        <>{rule.targetValue.toFixed(2)}%</>
+                        <>{rawTargetV.toFixed(2)}%</>
                       ) : (
                         <>
-                          {rule.targetValue.toLocaleString()} {unit}
+                          {rawTargetV.toLocaleString()} {unit}
                         </>
                       ))}
                   </span>
@@ -305,12 +323,12 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 <span>
                   Target: {rule.direction === 'ABOVE' ? 'Above' : 'Below'}{' '}
                   <span dir="ltr" className="font-mono">
-                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ??
+                    {formatScaledPrice(rawTargetV, rule.counterCurrency) ??
                       (rule.counterCurrency === '%' || unit === '%' ? (
-                        <>{rule.targetValue.toFixed(2)}%</>
+                        <>{rawTargetV.toFixed(2)}%</>
                       ) : (
                         <>
-                          {unit === '$' ? `$${rule.targetValue.toLocaleString()}` : `${rule.targetValue.toLocaleString()} ${unit}`}
+                          {unit === '$' ? `$${rawTargetV.toLocaleString()}` : `${rawTargetV.toLocaleString()} ${unit}`}
                         </>
                       ))}
                   </span>

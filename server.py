@@ -1022,10 +1022,14 @@ async def fetch_price_with_trace(
                 if isinstance(data, dict):
                     stats = data.get('stats', {})
                     pair_k = 'pm-irt' if sym_clean == 'GOLD_NOBITEX' else 'usdt-irt'
-                    item = stats.get(pair_k) or stats.get(pair_k.replace('-irt', '-rls'))
+                    item = stats.get(pair_k)
+                    if not item:
+                        pair_k = 'pm-rls' if sym_clean == 'GOLD_NOBITEX' else 'usdt-rls'
+                        item = stats.get(pair_k)
                     if item and item.get('latest'):
                         val = float(item['latest'])
-                        if 'rls' in pair_k: val = val / 10.0
+                        if 'rls' in pair_k or val > 1000000:
+                            val = val / 10.0
                         return {'price': val, 'state': 'LIVE', 'currency': 'TMN', 'source': 'نوبیتکس (Nobitex)'}
                 return None
             p = await _try_fetch('Nobitex Stats API', 'https://apiv2.nobitex.ir/market/stats', _extract_nobitex_direct)
@@ -2907,7 +2911,7 @@ PROBE_TARGETS = [
     {"id": "tsetmc_web", "name": "TSETMC Web (تارنمای قدیمی بورس)", "cat": "iran", "url": "http://old.tsetmc.com/tsev2/data/MarketWatchPlus.aspx", "extractor": lambda d: None},
     {"id": "tsetmc_main", "name": "TSETMC Main (درگاه اصلی بورس تهران)", "cat": "iran", "url": "https://tsetmc.com", "extractor": lambda d: None},
     {"id": "ice_cbi", "name": "ICE (مرکز مبادله ارز و طلای ایران)", "cat": "iran", "url": "https://ice.ir", "extractor": lambda d: None},
-    {"id": "nobitex_stats", "name": "Nobitex Stats (آمار بازار نوبیتکس)", "cat": "iran", "url": "https://apiv2.nobitex.ir/market/stats", "extractor": lambda d: float(d.get('stats', {}).get('usdt-rls', {}).get('latest', 0)) if isinstance(d, dict) else None},
+    {"id": "nobitex_stats", "name": "Nobitex Stats (آمار بازار نوبیتکس)", "cat": "iran", "url": "https://apiv2.nobitex.ir/market/stats", "extractor": lambda d: float(d.get('stats', {}).get('usdt-rls', {}).get('latest', 0)) / 10.0 if isinstance(d, dict) else None},
     {"id": "tabdeal_depth", "name": "Tabdeal Depth (دفتر سفارشات تبدیل)", "cat": "iran", "url": "https://api1.tabdeal.org/r/api/v1/depth?symbol=USDTIRT", "extractor": lambda d: float(d.get('bids', [[0]])[0][0]) if isinstance(d, dict) and d.get('bids') else None},
     {"id": "wallex_markets", "name": "Wallex Markets (مارکت والکس)", "cat": "iran", "url": "https://api.wallex.ir/v1/markets", "extractor": lambda d: float(d.get('result', {}).get('symbols', {}).get('USDTTMN', {}).get('stats', {}).get('lastPrice', 0)) if isinstance(d, dict) else None},
     {"id": "bitpin_markets", "name": "Bitpin Markets (مارکت بیت‌پین)", "cat": "iran", "url": "https://api.bitpin.org/v1/mkt/markets/", "extractor": lambda d: float(d.get('results', [{}])[0].get('price', 0)) if isinstance(d, dict) and d.get('results') else None},

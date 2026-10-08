@@ -798,21 +798,25 @@ export default function App() {
     // For Nobitex or Bonbast, ALWAYS display in Toman across all stages as requested!
     const isTmn = isNobitex || isBonbast || counterCurrency === 'TMN' || counterCurrency === 'IRT' || counterCurrency === 'تومان' || counterCurrency === 'ت';
     const cUpper = coin.toUpperCase();
-    const exPrices = exchangeSpecificPrices[exId];
+    const exPrices = exchangeSpecificPrices[exId] || (isNobitex ? exchangeSpecificPrices['nobitex'] : undefined) || (isBonbast ? exchangeSpecificPrices['bonbast'] : undefined);
     const exData = exPrices ? exPrices[cUpper] : undefined;
     const irData = exData || iranianMarketPrices[cUpper];
     const binanceMeta = cryptoPrices[cUpper];
-    const rate = usdtTomanRate > 10000 ? usdtTomanRate : 268200;
+    let rate = usdtTomanRate > 10000 ? usdtTomanRate : 268200;
+    if (rate > 1000000) rate = Math.round(rate / 10.0);
     const lastKnown = lastKnownCoinPrices[cUpper];
 
     // Priority Fix: USDT in Nobitex / Iranian exchanges / Toman counter currency
     // Always returns the genuine live Toman rate (e.g. 268,398 تومان) and unit تومان!
     if (cUpper === 'USDT' && (isNobitex || isBonbast || isTmn)) {
-      const usdtPrice = (exData && exData.priceTmn > 0)
+      let usdtPrice = (exData && exData.priceTmn > 0)
         ? exData.priceTmn
         : (irData && irData.priceTmn > 0 ? irData.priceTmn : rate);
-      const h = exData?.high24hTmn || Math.round(usdtPrice * 1.01);
-      const l = exData?.low24hTmn || Math.round(usdtPrice * 0.99);
+      if (usdtPrice > 1000000) usdtPrice = Math.round(usdtPrice / 10.0);
+      let h = exData?.high24hTmn || Math.round(usdtPrice * 1.01);
+      let l = exData?.low24hTmn || Math.round(usdtPrice * 0.99);
+      if (h > 1000000) h = Math.round(h / 10.0);
+      if (l > 1000000) l = Math.round(l / 10.0);
       const ch = exData?.change24h || irData?.change24h || 0.5;
       return {
         price: usdtPrice,
@@ -3445,6 +3449,13 @@ export default function App() {
                               key={sym}
                               onClick={() => {
                                 setSelectedCryptoCoin(sym);
+                                const curCounter = (selectedExchange.id?.toLowerCase().includes('nobitex') || !selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT') ? 'TMN' : (selectedCounterCurrency || selectedExchange.defaultCounter);
+                                const liveMkt = getCryptoMarketPrice(sym, selectedExchange.id, curCounter);
+                                const isTmnLocal = selectedExchange.id?.toLowerCase().includes('nobitex') || selectedExchange.id?.toLowerCase().includes('bonbast') || liveMkt.unit === 'تومان' || curCounter === 'TMN' || curCounter === 'IRT';
+                                const liveValStr = isTmnLocal ? Math.round(liveMkt.price).toString() : (liveMkt.price < 1 ? liveMkt.price.toFixed(6) : liveMkt.price.toFixed(2));
+                                setTargetValueStr(liveValStr);
+                                setUpperPriceStr(isTmnLocal ? Math.round(liveMkt.high24h || liveMkt.price * 1.025).toString() : (liveMkt.high24h || liveMkt.price * 1.025).toFixed(2));
+                                setLowerPriceStr(isTmnLocal ? Math.round(liveMkt.low24h || liveMkt.price * 0.975).toString() : (liveMkt.low24h || liveMkt.price * 0.975).toFixed(2));
                                 setCryptoStep(3);
                               }}
                               className={`w-full p-2.5 rounded-2xl border text-right flex items-center justify-between transition-all ${
@@ -3473,6 +3484,13 @@ export default function App() {
                           onClick={() => {
                             const customSym = cryptoSearchQuery.trim().toUpperCase();
                             setSelectedCryptoCoin(customSym);
+                            const curCounter = (selectedExchange.id?.toLowerCase().includes('nobitex') || !selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT') ? 'TMN' : (selectedCounterCurrency || selectedExchange.defaultCounter);
+                            const liveMkt = getCryptoMarketPrice(customSym, selectedExchange.id, curCounter);
+                            const isTmnLocal = selectedExchange.id?.toLowerCase().includes('nobitex') || selectedExchange.id?.toLowerCase().includes('bonbast') || liveMkt.unit === 'تومان' || curCounter === 'TMN' || curCounter === 'IRT';
+                            const liveValStr = isTmnLocal ? Math.round(liveMkt.price).toString() : (liveMkt.price < 1 ? liveMkt.price.toFixed(6) : liveMkt.price.toFixed(2));
+                            setTargetValueStr(liveValStr);
+                            setUpperPriceStr(isTmnLocal ? Math.round(liveMkt.high24h || liveMkt.price * 1.025).toString() : (liveMkt.high24h || liveMkt.price * 1.025).toFixed(2));
+                            setLowerPriceStr(isTmnLocal ? Math.round(liveMkt.low24h || liveMkt.price * 0.975).toString() : (liveMkt.low24h || liveMkt.price * 0.975).toFixed(2));
                             setCryptoStep(3);
                           }}
                           className="w-full p-3 rounded-2xl border border-dashed border-emerald-500/50 bg-emerald-500/10 text-emerald-300 font-bold text-xs text-center hover:bg-emerald-500/20 transition-all"
