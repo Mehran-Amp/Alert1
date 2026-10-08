@@ -1125,7 +1125,14 @@ class IranDomesticExchange implements Exchange {
           if (stats != null && stats['latest'] != null) {
             var p = double.tryParse(stats['latest'].toString()) ?? 0.0;
             if (p > 0) {
-              if (stats.toString().contains('rls')) p = p / 10.0;
+              // Nobitex returns raw prices in Rials (e.g. 2,680,000 for USDT). Always convert to Toman:
+              p = p / 10.0;
+              while (sym == 'USDT_NOBITEX' && p > 1000000) {
+                p = p / 10.0;
+              }
+              while (isGold && p > 100000000) {
+                p = p / 10.0;
+              }
               return MarketTicker(
                 exchangeId: id,
                 pair: pair,

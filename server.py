@@ -1028,9 +1028,9 @@ async def fetch_price_with_trace(
                         item = stats.get(pair_k)
                     if item and item.get('latest'):
                         val = float(item['latest'])
-                        if 'rls' in pair_k or 'irt' in pair_k or val > 100000:
+                        if 'rls' in pair_k or 'irt' in pair_k or val > 1000000:
                             val = val / 10.0
-                        while sym_clean in ['USDT_NOBITEX', 'USDT'] and val > 150000:
+                        while sym_clean in ['USDT_NOBITEX', 'USDT'] and val > 1000000:
                             val = val / 10.0
                         return {'price': val, 'state': 'LIVE', 'currency': 'TMN', 'source': 'نوبیتکس (Nobitex)'}
                 return None

@@ -113,10 +113,13 @@ class NobitexExchange implements Exchange {
         var high = double.tryParse(data['dayHigh']?.toString() ?? '0') ?? 0.0;
         var low = double.tryParse(data['dayLow']?.toString() ?? '0') ?? 0.0;
 
-        if (dst == 'rls') {
+        if (dst == 'rls' || pair.counterCurrency.toUpperCase() == 'TMN' || pair.counterCurrency.toUpperCase() == 'IRT' || price > 1000000) {
           if (price > 0) price /= 10.0; // Rials to Tomans
           if (high > 0) high /= 10.0;
           if (low > 0) low /= 10.0;
+        }
+        while (pair.baseCurrency.toUpperCase() == 'USDT' && (pair.counterCurrency.toUpperCase() == 'TMN' || pair.counterCurrency.toUpperCase() == 'IRT') && price > 1000000) {
+          price /= 10.0;
         }
 
         if (price > 0) {
