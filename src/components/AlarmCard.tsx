@@ -54,7 +54,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
       return 'تومان';
     }
     if (c === 'IRR' || c === 'RLS' || curr === 'ریال') {
-      return 'ریال';
+      return 'تومان';
     }
     return curr || '$';
   };
@@ -82,15 +82,15 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   let rawUpperP = rule.upperTargetPrice;
   let rawLowerP = rule.lowerTargetPrice;
 
-  // Safety net: Normalize any raw Rial values (> 1M for USDT on Iranian exchanges) to Tomans
+  // Safety net: Normalize any raw Rial values to Tomans for Nobitex / Bonbast / Iranian currencies
   if (unit === 'تومان' || (rule.exchangeId && (rule.exchangeId.toLowerCase().includes('nobitex') || rule.exchangeId.toLowerCase().includes('bonbast')))) {
     unit = 'تومان';
     if (rule.baseCurrency === 'USDT' || rule.marketSymbol.startsWith('USDT')) {
-      if (rawDisplayP > 1000000) rawDisplayP = Math.round(rawDisplayP / 10.0);
-      if (rawBaseP > 1000000) rawBaseP = Math.round(rawBaseP / 10.0);
-      if (rawTargetV > 1000000) rawTargetV = Math.round(rawTargetV / 10.0);
-      if (rawUpperP && rawUpperP > 1000000) rawUpperP = Math.round(rawUpperP / 10.0);
-      if (rawLowerP && rawLowerP > 1000000) rawLowerP = Math.round(rawLowerP / 10.0);
+      while (rawDisplayP > 150000) rawDisplayP = Math.round(rawDisplayP / 10.0);
+      while (rawBaseP > 150000) rawBaseP = Math.round(rawBaseP / 10.0);
+      while (rawTargetV > 150000) rawTargetV = Math.round(rawTargetV / 10.0);
+      if (rawUpperP) { while (rawUpperP > 150000) rawUpperP = Math.round(rawUpperP / 10.0); }
+      if (rawLowerP) { while (rawLowerP > 150000) rawLowerP = Math.round(rawLowerP / 10.0); }
     }
   }
 

@@ -1028,7 +1028,9 @@ async def fetch_price_with_trace(
                         item = stats.get(pair_k)
                     if item and item.get('latest'):
                         val = float(item['latest'])
-                        if 'rls' in pair_k or val > 1000000:
+                        if 'rls' in pair_k or 'irt' in pair_k or val > 100000:
+                            val = val / 10.0
+                        while sym_clean in ['USDT_NOBITEX', 'USDT'] and val > 150000:
                             val = val / 10.0
                         return {'price': val, 'state': 'LIVE', 'currency': 'TMN', 'source': 'نوبیتکس (Nobitex)'}
                 return None
@@ -1227,13 +1229,15 @@ async def fetch_price_with_trace(
                         latest_raw = item.get('latest')
                         if latest_raw and float(latest_raw) > 0:
                             raw_val = float(latest_raw)
-                            # Convert RLS to TMN if quote is Rials
-                            is_rls = tgt.endswith('-rls') or tgt.endswith('rls')
-                            final_val = (raw_val / 10.0) if is_rls else raw_val
+                            # Convert RLS to TMN if quote is Rials/IRT (Nobitex stats domestic pairs are in Rials)
+                            is_domestic = tgt.endswith('-rls') or tgt.endswith('rls') or tgt.endswith('-irt') or tgt.endswith('irt')
+                            final_val = (raw_val / 10.0) if is_domestic else raw_val
+                            while sym_clean in ['USDT', 'USDTTMN', 'USDTIRT'] and final_val > 150000:
+                                final_val = final_val / 10.0
                             return {
                                 'price': final_val,
                                 'state': 'LIVE',
-                                'currency': 'TMN' if (is_rls or tgt.endswith('-irt')) else 'USDT'
+                                'currency': 'TMN' if is_domestic else 'USDT'
                             }
             return None
 
@@ -1251,8 +1255,10 @@ async def fetch_price_with_trace(
                         p_val = data['bids'][0][0]
                     if p_val and float(p_val) > 0:
                         raw_val = float(p_val)
-                        is_domestic_rial = nobitex_sym.upper().endswith('RLS') or nobitex_sym.upper().endswith('IRT')
+                        is_domestic_rial = nobitex_sym.upper().endswith('RLS') or nobitex_sym.upper().endswith('IRT') or 'TMN' in nobitex_sym.upper()
                         final_val = (raw_val / 10.0) if is_domestic_rial else raw_val
+                        while sym_clean in ['USDT', 'USDTTMN', 'USDTIRT'] and final_val > 150000:
+                            final_val = final_val / 10.0
                         return {
                             'price': final_val,
                             'state': 'LIVE',

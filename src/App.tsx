@@ -853,7 +853,7 @@ export default function App() {
     const irData = exData || iranianMarketPrices[cUpper];
     const binanceMeta = cryptoPrices[cUpper];
     let rate = usdtTomanRate > 10000 ? usdtTomanRate : 268200;
-    if (rate > 1000000) rate = Math.round(rate / 10.0);
+    while (rate > 150000) rate = Math.round(rate / 10.0);
     const lastKnown = lastKnownCoinPrices[cUpper];
 
     // Priority Fix: USDT in Nobitex / Iranian exchanges / Toman counter currency
@@ -862,11 +862,11 @@ export default function App() {
       let usdtPrice = (exData && exData.priceTmn > 0)
         ? exData.priceTmn
         : (irData && irData.priceTmn > 0 ? irData.priceTmn : rate);
-      if (usdtPrice > 1000000) usdtPrice = Math.round(usdtPrice / 10.0);
+      while (usdtPrice > 150000) usdtPrice = Math.round(usdtPrice / 10.0);
       let h = exData?.high24hTmn || Math.round(usdtPrice * 1.01);
       let l = exData?.low24hTmn || Math.round(usdtPrice * 0.99);
-      if (h > 1000000) h = Math.round(h / 10.0);
-      if (l > 1000000) l = Math.round(l / 10.0);
+      while (h > 150000) h = Math.round(h / 10.0);
+      while (l > 150000) l = Math.round(l / 10.0);
       const ch = exData?.change24h || irData?.change24h || 0.5;
       return {
         price: usdtPrice,
@@ -1262,11 +1262,20 @@ export default function App() {
                   if (!nobiTmnPrices[base]) {
                     nobiTmnPrices[base] = { priceTmn: 0, priceUsdt: 0, change24h: ch };
                   }
-                  if (quote === 'RLS') {
-                    const tmn = latest / 10;
+                  if (quote === 'RLS' || quote === 'IRT') {
+                    let tmn = quote === 'RLS' ? latest / 10 : latest;
+                    let hTmn = dayHigh > 0 ? (quote === 'RLS' ? dayHigh / 10 : dayHigh) : undefined;
+                    let lTmn = dayLow > 0 ? (quote === 'RLS' ? dayLow / 10 : dayLow) : undefined;
+
+                    if (base === 'USDT') {
+                      while (tmn > 150000) tmn = tmn / 10;
+                      if (hTmn) { while (hTmn > 150000) hTmn = hTmn / 10; }
+                      if (lTmn) { while (lTmn > 150000) lTmn = lTmn / 10; }
+                    }
+
                     nobiTmnPrices[base].priceTmn = tmn;
-                    nobiTmnPrices[base].high24hTmn = dayHigh > 0 ? dayHigh / 10 : undefined;
-                    nobiTmnPrices[base].low24hTmn = dayLow > 0 ? dayLow / 10 : undefined;
+                    nobiTmnPrices[base].high24hTmn = hTmn;
+                    nobiTmnPrices[base].low24hTmn = lTmn;
                     nobiTmnPrices[base].change24h = ch;
 
                     if (base === 'USDT') {
@@ -1277,9 +1286,9 @@ export default function App() {
                           localStorage.setItem('alarmer_usdt_tmn_rate', tmn.toString());
                         } catch (_) {}
                       }
-                      updateLastKnownCoinPrice('USDT', tmn, 1.0, dayHigh > 0 ? dayHigh / 10 : undefined, dayLow > 0 ? dayLow / 10 : undefined);
+                      updateLastKnownCoinPrice('USDT', tmn, 1.0, hTmn, lTmn);
                     } else {
-                      updateLastKnownCoinPrice(base, tmn, tmn / curRate, dayHigh > 0 ? dayHigh / 10 : undefined, dayLow > 0 ? dayLow / 10 : undefined);
+                      updateLastKnownCoinPrice(base, tmn, tmn / curRate, hTmn, lTmn);
                     }
                   } else if (quote === 'USDT') {
                     nobiTmnPrices[base].priceUsdt = latest;
