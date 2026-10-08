@@ -1,0 +1,22 @@
+{
+  "name": "Alarmer - Real-Time Market Alert Studio",
+  "short_name": "Alarmer",
+  "description": "Real-time crypto and financial asset alert system with 40+ exchanges, Telegram notifications, and multi-market monitoring.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#10131a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -49,7 +49,9 @@ import {
   Send
 } from 'lucide-react';
 import { AlarmCard } from './components/AlarmCard';
+import { AppLogo } from './components/AppLogo';
 import { FA } from './i18n/fa';
+import { getLoginTelegramI18n } from './i18n/loginTelegram';
 
 export interface AlertRule {
   uuid: string;
@@ -537,6 +539,7 @@ export default function App() {
   const [appTheme, setAppTheme] = useState<ThemeModeType>('dark-green');
   const [currentLang, setCurrentLang] = useState<string>('fa');
   const [showLanguageModal, setShowLanguageModal] = useState<boolean>(false);
+  const tAuthTg = getLoginTelegramI18n(currentLang);
 
   // GLOBAL TIMER FEATURE (Overrides individual rule timers when active)
   const [globalTimerEnabled, setGlobalTimerEnabled] = useState<boolean>(() => {
@@ -1303,7 +1306,7 @@ export default function App() {
 
   const handleTestTelegramMessage = async () => {
     if (!telegramChatId.trim()) {
-      showToast(currentLang === 'fa' ? 'لطفاً ابتدا چت آیدی تلگرام خود را وارد کنید.' : 'Please enter your Telegram Chat ID first.');
+      showToast(tAuthTg.telegramEmptyChatIdToast);
       return;
     }
     setIsTestingTelegram(true);
@@ -1316,17 +1319,17 @@ export default function App() {
         },
         body: JSON.stringify({
           chat_id: telegramChatId.trim(),
-          message: '🤖 [SignalAlert Engine] ارتباط با ربات تلگرام برقرار شد. تمامی هشدارهای فعال به این چت ارسال می‌شوند.',
+          message: '🤖 [SignalAlert Engine] Telegram test dispatch successful.',
         }),
       });
       if (res.ok) {
-        showToast(currentLang === 'fa' ? '✅ پیام تست به تلگرام ارسال شد.' : '✅ Test message sent to Telegram successfully.');
+        showToast(tAuthTg.telegramTestSuccessToast);
       } else {
         const data = await res.json();
-        showToast(data.detail || (currentLang === 'fa' ? '⚠️ خطا در ارسال پیام تلگرام.' : '⚠️ Error sending Telegram message.'));
+        showToast(data.detail || tAuthTg.telegramTestErrorToast);
       }
     } catch (err) {
-      showToast(currentLang === 'fa' ? '⚠️ خطا در ارتباط با سرور تلگرام.' : '⚠️ Error connecting to Telegram server.');
+      showToast(tAuthTg.telegramServerErrorToast);
     } finally {
       setIsTestingTelegram(false);
     }
@@ -1881,9 +1884,7 @@ export default function App() {
       {/* Header */}
       <header className={`border-b ${isLight ? 'border-slate-200 bg-white/90' : 'border-slate-800/80 bg-slate-900/80'} backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4`}>
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-xl ${isOrange ? 'bg-gradient-to-br from-orange-500 to-amber-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'} flex items-center justify-center shadow-lg text-slate-950`}>
-            <AlarmClock className="h-5 w-5 font-bold" />
-          </div>
+          <AppLogo className="h-10 w-10 rounded-2xl shadow-lg ring-1 ring-white/10 hover:scale-105 transition-transform" />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base lg:text-lg font-bold tracking-tight flex items-center gap-2">
@@ -1910,7 +1911,7 @@ export default function App() {
                 ? 'border-slate-300 bg-white text-slate-700'
                 : 'border-slate-800 bg-slate-900 text-slate-300'
             }`}
-            title="وضعیت حساب کاربری و ورود با گوگل (اختیاری)"
+            title={tAuthTg.headerLoginTooltip}
           >
             {googleUser ? (
               <>
@@ -1921,7 +1922,7 @@ export default function App() {
             ) : (
               <>
                 <User className="h-3.5 w-3.5 text-slate-400" />
-                <span className="hidden sm:inline text-[11px]">ورود با گوگل</span>
+                <span className="hidden sm:inline text-[11px]">{tAuthTg.headerSignInLabel}</span>
               </>
             )}
           </button>
@@ -2008,9 +2009,7 @@ export default function App() {
               {/* Phone App Header */}
               <div className={`px-4 py-3 border-b ${isLight ? 'border-slate-200 bg-white' : 'border-slate-900 bg-slate-950'} flex items-center justify-between`}>
                 <div className="flex items-center gap-2.5">
-                  <div className={`h-8 w-8 rounded-xl ${accentSubtleClass} border flex items-center justify-center`}>
-                    <AlarmClock className="h-4 w-4" />
-                  </div>
+                  <AppLogo className="h-8 w-8 rounded-xl shadow-md ring-1 ring-white/10" />
                   <div>
                     <h2 className="text-sm font-bold">
                       {mobileScreen === 'alerts' && (currentLang === 'fa' ? FA.myAlertsDefault : 'My Alerts (Default)')}
@@ -2046,8 +2045,8 @@ export default function App() {
                   <div className="space-y-3">
                     {rules.length === 0 ? (
                       <div className="text-center py-16 px-4 space-y-3">
-                        <div className="h-16 w-16 mx-auto rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
-                          <AlarmClock className="h-8 w-8" />
+                        <div className="h-16 w-16 mx-auto rounded-2xl flex items-center justify-center">
+                          <AppLogo className="h-16 w-16 shadow-2xl rounded-2xl ring-1 ring-white/10" />
                         </div>
                         <h3 className="text-sm font-bold">
                           {currentLang === 'fa' ? FA.noAlertsYet : 'No Alerts Set Yet'}
@@ -2124,12 +2123,12 @@ export default function App() {
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-emerald-400" />
                           <h4 className="font-bold text-xs text-white">
-                            {currentLang === 'fa' ? '۱. حساب کاربری و ورود (Login)' : '1. User Account & Login'}
+                            {tAuthTg.loginSectionTitle}
                           </h4>
                         </div>
                         {googleUser && (
                           <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
-                            👑 VIP Active
+                            {tAuthTg.vipActiveBadge}
                           </span>
                         )}
                       </div>
@@ -2143,14 +2142,14 @@ export default function App() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-xs text-white truncate">
-                                {googleUser ? googleUser.name : (currentLang === 'fa' ? 'کاربر مهمان (Guest Mode)' : 'Guest Mode')}
+                                {googleUser ? googleUser.name : tAuthTg.guestUserTitle}
                               </span>
                               <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${googleUser ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}`}>
-                                {googleUser ? 'PREMIUM' : (currentLang === 'fa' ? 'اختیاری' : 'Optional')}
+                                {googleUser ? tAuthTg.premiumBadge : tAuthTg.optionalBadge}
                               </span>
                             </div>
                             <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
-                              {googleUser ? googleUser.email : (currentLang === 'fa' ? 'ورود با حساب گوگل جهت همگام‌سازی ابری و دسترسی نامحدود' : 'Sign in for cloud backup & multi-device sync')}
+                              {googleUser ? googleUser.email : tAuthTg.loginSubGuest}
                             </span>
                           </div>
                         </div>
@@ -2160,18 +2159,18 @@ export default function App() {
                             onClick={() => {
                               setGoogleUser(null);
                               localStorage.removeItem('alarmer_google_user');
-                              showToast(currentLang === 'fa' ? 'از حساب گوگل خارج شدید.' : 'Signed out of Google account.');
+                              showToast(tAuthTg.signedOutToast);
                             }}
                             className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 text-[11px] font-bold hover:bg-rose-500/20 transition-all cursor-pointer shrink-0"
                           >
-                            {currentLang === 'fa' ? 'خروج از حساب' : 'Sign Out'}
+                            {tAuthTg.signOutBtn}
                           </button>
                         ) : (
                           <button
                             onClick={() => setShowGoogleModal(true)}
                             className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all ${accentBgClass} text-slate-950 hover:brightness-110 cursor-pointer shrink-0`}
                           >
-                            <span>{currentLang === 'fa' ? 'ورود با گوگل' : 'Sign In'}</span>
+                            <span>{tAuthTg.signInBtn}</span>
                           </button>
                         )}
                       </div>
@@ -2185,11 +2184,11 @@ export default function App() {
                         <div className="flex items-center gap-2">
                           <Send className="h-4 w-4 text-blue-400" />
                           <h4 className="font-bold text-xs text-white">
-                            {currentLang === 'fa' ? '۲. اتصال به ربات تلگرام (Telegram Bot)' : '2. Telegram Online Bot'}
+                            {tAuthTg.telegramSectionTitle}
                           </h4>
                         </div>
                         <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
-                          ● Online 24/7
+                          {tAuthTg.telegramOnlineBadge}
                         </span>
                       </div>
 
@@ -2203,14 +2202,14 @@ export default function App() {
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <span className="font-bold text-xs text-white block">
-                                  {currentLang === 'fa' ? 'ربات آنلاین ارسال هشدارها' : 'Online Telegram Alert Bot'}
+                                  {tAuthTg.telegramBotName}
                                 </span>
                                 <span className="text-[10px] font-mono text-blue-400 bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-800/50">
-                                  @aisocialfeedbot
+                                  {tAuthTg.telegramBotHandle}
                                 </span>
                               </div>
                               <span className="text-[10px] text-slate-400 block mt-0.5">
-                                {currentLang === 'fa' ? 'ارسال ۲۴ ساعته اعلان هشدارها روی تلگرام با سرعت بالا' : 'Instant 24/7 alert dispatch directly to your Telegram'}
+                                {tAuthTg.telegramBotSubtitle}
                               </span>
                             </div>
                           </div>
@@ -2220,24 +2219,24 @@ export default function App() {
                         <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10.5px] text-blue-200 leading-relaxed space-y-1">
                           <div className="flex items-start gap-1.5">
                             <span className="text-blue-400 font-bold">۱.</span>
-                            <span>{currentLang === 'fa' ? 'در تلگرام به ربات @aisocialfeedbot پیام داده و دکمه /start را بزنید.' : 'Message @aisocialfeedbot on Telegram and send /start.'}</span>
+                            <span>{tAuthTg.telegramStep1}</span>
                           </div>
                           <div className="flex items-start gap-1.5">
                             <span className="text-blue-400 font-bold">۲.</span>
-                            <span>{currentLang === 'fa' ? 'شناسه عددی (Chat ID) یا یوزرنام تلگرام خود را وارد و دکمه تست را بزنید.' : 'Enter your Chat ID or Username below and test dispatch.'}</span>
+                            <span>{tAuthTg.telegramStep2}</span>
                           </div>
                         </div>
 
                         <div className="space-y-1.5 pt-0.5">
                           <label className="block text-[10px] text-slate-400 font-medium">
-                            {currentLang === 'fa' ? 'چت آیدی یا یوزرنام تلگرام (Telegram Chat ID):' : 'Telegram Chat ID or Username:'}
+                            {tAuthTg.telegramInputLabel}
                           </label>
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
                               value={telegramChatId}
                               onChange={(e) => setTelegramChatId(e.target.value)}
-                              placeholder="@MyTelegramUser or 123456789"
+                              placeholder={tAuthTg.telegramInputPlaceholder}
                               className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
                             />
                             <button
@@ -2246,7 +2245,7 @@ export default function App() {
                               className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"
                             >
                               <Zap className={`h-3.5 w-3.5 ${isTestingTelegram ? 'animate-spin' : ''}`} />
-                              <span>{isTestingTelegram ? '...' : (currentLang === 'fa' ? 'تست تلگرام' : 'Test Dispatch')}</span>
+                              <span>{isTestingTelegram ? tAuthTg.telegramTestingBtn : tAuthTg.telegramTestBtn}</span>
                             </button>
                           </div>
                         </div>
@@ -2627,12 +2626,22 @@ export default function App() {
                               className="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-300 font-bold text-[11px] border border-blue-500/30 flex items-center justify-center gap-1 cursor-pointer"
                             >
                               <Zap className="h-3.5 w-3.5" />
-                              <span>{currentLang === 'fa' ? 'تست ارسال تلگرام' : 'Test Telegram'}</span>
+                              <span>{tAuthTg.adminTestTelegramBtn}</span>
                             </button>
                           </div>
                         </div>
                       </div>
                     )}
+
+                    {/* App Branding & Logo Footer */}
+                    <div className="pt-2 pb-2 text-center flex flex-col items-center justify-center gap-1 opacity-90 border-t border-slate-800/40 mt-3">
+                      <AppLogo className="h-9 w-9 rounded-xl shadow-md ring-1 ring-white/10" />
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                        <span>Alarmer</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">PRO</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-mono">Real-Time Market Alert Studio</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2661,10 +2670,10 @@ export default function App() {
                     mobileScreen === 'alerts' ? `${accentClass} font-bold` : 'text-slate-400 hover:text-slate-300'
                   }`}
                 >
-                  <div className={`h-10 w-10 -mt-4 rounded-full flex items-center justify-center shadow-xl transition-transform hover:scale-105 ${
-                    mobileScreen === 'alerts' ? `${accentBgClass} text-slate-950 font-bold` : 'bg-slate-800 text-slate-300'
+                  <div className={`h-10 w-10 -mt-4 rounded-full flex items-center justify-center shadow-xl transition-transform hover:scale-105 p-1.5 ${
+                    mobileScreen === 'alerts' ? `${accentBgClass} text-slate-950 font-bold ring-2 ring-emerald-400/40` : 'bg-slate-800 text-slate-300'
                   }`}>
-                    <AlarmClock className="h-5 w-5" />
+                    <AppLogo className="h-full w-full" withBackground={false} />
                   </div>
                   <span className="text-[10px] font-bold">{currentLang === 'fa' ? FA.myAlerts : 'My Alerts'}</span>
                 </button>
@@ -4353,8 +4362,8 @@ export default function App() {
 
       {/* 2. OPTIONAL GOOGLE ACCOUNT MODAL (PREMIUM READY) */}
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-md p-6 space-y-4 text-right shadow-2xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" dir={currentLangObj.dir}>
+          <div className={`bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-md p-6 space-y-4 ${currentLangObj.dir === 'rtl' ? 'text-right' : 'text-left'} shadow-2xl animate-in fade-in zoom-in-95`}>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-2xl bg-white shadow-md">
@@ -4366,12 +4375,12 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <span>ورود با حساب گوگل</span>
+                    <span>{tAuthTg.googleModalTitle}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-normal">
-                      اختیاری
+                      {tAuthTg.optionalBadge}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-400">حساب کاربری و وضعیت عضویت پریمیوم</p>
+                  <p className="text-[11px] text-slate-400">{tAuthTg.googleModalSubtitle}</p>
                 </div>
               </div>
               <button
@@ -4393,14 +4402,14 @@ export default function App() {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-white">{googleUser.name}</span>
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                          PREMIUM EARLY ADOPTER
+                          {tAuthTg.vipEarlyAdopterBadge}
                         </span>
                       </div>
                       <span className="text-xs text-amber-400 font-mono block">{googleUser.email}</span>
                     </div>
                   </div>
                   <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-300 leading-relaxed">
-                    ✨ حساب شما متصل است؛ در نسخه‌های بعدی تمامی امکانات ویژه، همگام‌سازی ابری و پایش پیشرفته بدون هزینه اضافی برای شما فعال خواهد بود.
+                    {tAuthTg.vipActiveDesc}
                   </div>
                 </div>
 
@@ -4410,34 +4419,34 @@ export default function App() {
                       setGoogleUser(null);
                       localStorage.removeItem('alarmer_google_user');
                       setShowGoogleModal(false);
-                      showToast('از حساب گوگل خارج شدید.');
+                      showToast(tAuthTg.signedOutToast);
                     }}
                     className="flex-1 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 font-bold text-xs"
                   >
-                    خروج از حساب گوگل
+                    {tAuthTg.signOutGoogleModalBtn}
                   </button>
                   <button
                     onClick={() => setShowGoogleModal(false)}
                     className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs"
                   >
-                    بستن
+                    {tAuthTg.closeBtn}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  اتصال به حساب گوگل <span className="text-emerald-400 font-bold">کاملاً اختیاری</span> است. بدون ورود می‌توانید از تمام ویژگی‌های برنامه استفاده کنید. با اتصال حساب گوگل:
+                  {tAuthTg.modalIntro}
                 </p>
 
                 <div className="space-y-2 text-xs text-slate-300">
                   <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2">
                     <span className="text-amber-400">👑</span>
-                    <span>ثبت وضعیت حساب به عنوان <span className="text-white font-bold">عضو ویژه (Premium Early Adopter)</span></span>
+                    <span>{tAuthTg.benefitVipDesc}</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2">
                     <span className="text-blue-400">☁️</span>
-                    <span>پشتیبان‌گیری ابری و همگام‌سازی خودکار آلارم‌ها بین دستگاه‌ها</span>
+                    <span>{tAuthTg.benefitCloudDesc}</span>
                   </div>
                 </div>
 
@@ -4452,7 +4461,7 @@ export default function App() {
                       setGoogleUser(user);
                       localStorage.setItem('alarmer_google_user', JSON.stringify(user));
                       setShowGoogleModal(false);
-                      showToast('🎉 با موفقیت به حساب گوگل متصل شدید (عضو ویژه)!');
+                      showToast(tAuthTg.signedInToast);
                     }}
                     className="w-full py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs flex items-center justify-center gap-2.5 shadow-lg transition-all"
                   >
@@ -4461,14 +4470,14 @@ export default function App() {
                       alt="Google"
                       className="w-4 h-4"
                     />
-                    <span>ادامه با حساب Google (Mehran.Aminpoor@gmail.com)</span>
+                    <span>{tAuthTg.continueWithGoogleBtn} (Mehran.Aminpoor@gmail.com)</span>
                   </button>
 
                   <button
                     onClick={() => setShowGoogleModal(false)}
                     className="w-full py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white font-bold text-xs transition-all"
                   >
-                    فعلاً نه، ادامه به صورت مهمان (نسخه آفلاین)
+                    {tAuthTg.continueAsGuestBtn}
                   </button>
                 </div>
               </div>
