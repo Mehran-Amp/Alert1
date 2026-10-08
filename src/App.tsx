@@ -147,12 +147,15 @@ export const formatScaledPrice = (price: number, unit?: string): string | null =
   const mMatch = /^(M|MILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$/i.exec(u);
   let scale = '';
   let curr = 'USD';
+  let maxDecimals = 3;
   if (bMatch) {
     scale = 'B';
     curr = bMatch[2] || 'USD';
+    maxDecimals = 3;
   } else if (mMatch) {
     scale = 'M';
     curr = mMatch[2] || 'USD';
+    maxDecimals = 2;
   }
   if (!scale) return null;
 
@@ -161,7 +164,11 @@ export const formatScaledPrice = (price: number, unit?: string): string | null =
 
   const isNeg = price < 0;
   const absP = Math.abs(price);
-  const numStr = absP >= 1000 ? absP.toLocaleString('en-US') : absP.toString();
+  const fixedStr = absP.toFixed(maxDecimals);
+  const [intPart, decPart] = fixedStr.split('.');
+  const formattedInt = Number(intPart).toLocaleString('en-US');
+  const cleanDec = (decPart || '').replace(/0+$/, '');
+  const numStr = cleanDec.length > 0 ? `${formattedInt}.${cleanDec}` : formattedInt;
   const prefix = isNeg ? `-${sym}` : sym;
   return `\u202A${prefix}${numStr}${scale}\u202C`;
 };

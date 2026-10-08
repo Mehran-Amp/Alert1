@@ -177,7 +177,9 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
             {rule.basePrice > 0 && Math.abs(displayP - rule.basePrice) > 1e-8 ? (
               <span className="line-through">
                 {formatScaledPrice(rule.basePrice, rule.counterCurrency) ??
-                  (unit === '$'
+                  (rule.counterCurrency === '%' || unit === '%'
+                    ? `${rule.basePrice.toFixed(2)}%`
+                    : unit === '$'
                     ? `$${rule.basePrice.toLocaleString()}`
                     : `${rule.basePrice.toLocaleString()} ${unit}`)}
               </span>
@@ -185,7 +187,9 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
           </div>
           <div className="text-[15px] font-black font-mono tracking-tight text-white leading-tight truncate">
             {formatScaledPrice(displayP, rule.counterCurrency) ??
-              (unit === '$'
+              (rule.counterCurrency === '%' || unit === '%'
+                ? `${displayP.toFixed(2)}%`
+                : unit === '$'
                 ? `$${
                     displayP >= 1000
                       ? Math.round(displayP).toLocaleString()
@@ -274,23 +278,29 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 <span>
                   {FA.target} {rule.direction === 'ABOVE' ? FA.above : FA.below}{' '}
                   <span dir="ltr" className="font-mono">
-                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ?? (
-                      <>
-                        {rule.targetValue.toLocaleString()} {unit}
-                      </>
-                    )}
+                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ??
+                      (rule.counterCurrency === '%' || unit === '%' ? (
+                        <>{rule.targetValue.toFixed(2)}%</>
+                      ) : (
+                        <>
+                          {rule.targetValue.toLocaleString()} {unit}
+                        </>
+                      ))}
                   </span>
                 </span>
               ) : (
                 <span>
                   Target: {rule.direction === 'ABOVE' ? 'Above' : 'Below'}{' '}
                   <span dir="ltr" className="font-mono">
-                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ?? (
-                      <>
-                        {unit}
-                        {rule.targetValue.toLocaleString()}
-                      </>
-                    )}
+                    {formatScaledPrice(rule.targetValue, rule.counterCurrency) ??
+                      (rule.counterCurrency === '%' || unit === '%' ? (
+                        <>{rule.targetValue.toFixed(2)}%</>
+                      ) : (
+                        <>
+                          {unit}
+                          {rule.targetValue.toLocaleString()}
+                        </>
+                      ))}
                   </span>
                 </span>
               )}

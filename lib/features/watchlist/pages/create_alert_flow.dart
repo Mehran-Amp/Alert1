@@ -155,16 +155,24 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         text: pctText,
       );
       _targetPriceController = TextEditingController(
-        text: rule.targetPrice != null ? rule.targetPrice.toString() : (_currentPrice?.toStringAsFixed(2) ?? ''),
+        text: rule.targetPrice != null
+            ? FormatUtils.formatInputNumberForUnit(rule.targetPrice!, rule.counterCurrency)
+            : (_currentPrice != null
+                ? FormatUtils.formatInputNumberForUnit(_currentPrice!, rule.counterCurrency)
+                : ''),
       );
       _upperPriceController = TextEditingController(
-        text: rule.upperTargetPrice != null ? rule.upperTargetPrice.toString() : '',
+        text: rule.upperTargetPrice != null
+            ? FormatUtils.formatInputNumberForUnit(rule.upperTargetPrice!, rule.counterCurrency)
+            : '',
       );
       _upperNoteController = TextEditingController(
         text: rule.upperNote ?? '',
       );
       _lowerPriceController = TextEditingController(
-        text: rule.lowerTargetPrice != null ? rule.lowerTargetPrice.toString() : '',
+        text: rule.lowerTargetPrice != null
+            ? FormatUtils.formatInputNumberForUnit(rule.lowerTargetPrice!, rule.counterCurrency)
+            : '',
       );
       _lowerNoteController = TextEditingController(
         text: rule.lowerNote ?? '',
@@ -333,7 +341,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     } else if (quoteCurrency == 'BTC') {
       return '₿${price.toStringAsFixed(8)}';
     } else if (quoteCurrency == '%') {
-      return '$numStr%';
+      return '${price.toStringAsFixed(2)}%';
     } else if (quoteCurrency == 'pts') {
       return '$numStr pts';
     } else if (quoteCurrency == 'JPY' || quoteCurrency == 'CNY') {
@@ -349,6 +357,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     } else {
       return '\$$numStr';
     }
+  }
+
+  String _formatInputNumber(double price, [String? quoteCurrency]) {
+    final quote = quoteCurrency ??
+        _selectedPair?.counterCurrency ??
+        (_flowType == MarketFlowType.iran ? 'TMN' : (_selectedExchange?.defaultCounterCurrency ?? 'USD'));
+    return FormatUtils.formatInputNumberForUnit(price, quote);
   }
 
   static String _formatSmartNumber(double price) {
@@ -623,7 +638,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         setState(() {
           _macroLivePrices[sym] = snapshot.price;
           _currentPrice = snapshot.price;
-          _targetPriceController.text = _formatSmartNumber(snapshot.price);
+          _targetPriceController.text = FormatUtils.formatInputNumberForUnit(snapshot.price, unit);
           _preferServerProxy = false;
           _isLoadingPrice = false;
         });
@@ -640,7 +655,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         setState(() {
           _macroLivePrices[sym] = serverPrice;
           _currentPrice = serverPrice;
-          _targetPriceController.text = _formatSmartNumber(serverPrice);
+          _targetPriceController.text = FormatUtils.formatInputNumberForUnit(serverPrice, unit);
           _preferServerProxy = true;
           _isLoadingPrice = false;
         });
@@ -2514,9 +2529,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       child: InkWell(
                         onTap: () {
                           if (_direction == AlertDirection.bothSides) {
-                            _upperPriceController.text = _formatSmartNumber(h24);
+                            _upperPriceController.text = _formatInputNumber(h24);
                           } else {
-                            _targetPriceController.text = _formatSmartNumber(h24);
+                            _targetPriceController.text = _formatInputNumber(h24);
                             setState(() => _direction = AlertDirection.above);
                           }
                         },
@@ -2534,7 +2549,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                               Text(lang == 'fa' ? '🔼 سقف ۲۴h:' : '🔼 24h High:', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppTokens.positive)),
                               const SizedBox(width: 4),
                               Flexible(
-                                child: Text(_formatSmartNumber(h24), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: AppTokens.positive), overflow: TextOverflow.ellipsis),
+                                child: Text(_formatInputNumber(h24), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: AppTokens.positive), overflow: TextOverflow.ellipsis),
                               ),
                             ],
                           ),
@@ -2546,9 +2561,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       child: InkWell(
                         onTap: () {
                           if (_direction == AlertDirection.bothSides) {
-                            _lowerPriceController.text = _formatSmartNumber(l24);
+                            _lowerPriceController.text = _formatInputNumber(l24);
                           } else {
-                            _targetPriceController.text = _formatSmartNumber(l24);
+                            _targetPriceController.text = _formatInputNumber(l24);
                             setState(() => _direction = AlertDirection.below);
                           }
                         },
@@ -2566,7 +2581,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                               Text(lang == 'fa' ? '🔽 کف ۲۴h:' : '🔽 24h Low:', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppTokens.negative)),
                               const SizedBox(width: 4),
                               Flexible(
-                                child: Text(_formatSmartNumber(l24), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: AppTokens.negative), overflow: TextOverflow.ellipsis),
+                                child: Text(_formatInputNumber(l24), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: AppTokens.negative), overflow: TextOverflow.ellipsis),
                               ),
                             ],
                           ),

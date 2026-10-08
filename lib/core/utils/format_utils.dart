@@ -54,18 +54,24 @@ class FormatUtils {
     final bSuffixMatch = RegExp(r'^(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)\s*(B|BILLION)$', caseSensitive: false).firstMatch(upper);
     final mSuffixMatch = RegExp(r'^(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)\s*(M|MILLION)$', caseSensitive: false).firstMatch(upper);
 
+    int maxDecimals = 3;
+
     if (bMatch != null) {
       scaleLetter = 'B';
       baseCurr = (bMatch.group(2) ?? 'USD').toUpperCase();
+      maxDecimals = 3;
     } else if (mMatch != null) {
       scaleLetter = 'M';
       baseCurr = (mMatch.group(2) ?? 'USD').toUpperCase();
+      maxDecimals = 2;
     } else if (bSuffixMatch != null) {
       scaleLetter = 'B';
       baseCurr = bSuffixMatch.group(1)!.toUpperCase();
+      maxDecimals = 3;
     } else if (mSuffixMatch != null) {
       scaleLetter = 'M';
       baseCurr = mSuffixMatch.group(1)!.toUpperCase();
+      maxDecimals = 2;
     }
 
     if (scaleLetter == null) {
@@ -85,23 +91,16 @@ class FormatUtils {
       default: sym = '\$'; break;
     }
 
-    // Exact precision with thousand separators without rounding
+    // Exact precision with thousand separators and restricted decimals per scale (B: max 3, M: max 2)
     final absPrice = price.abs();
-    String formattedNum;
-    if (absPrice >= 1000) {
-      if (price == price.roundToDouble()) {
-        formattedNum = _noDecimal.format(price.toInt().abs());
-      } else {
-        final parts = absPrice.toString().split('.');
-        final intPart = _noDecimal.format(int.parse(parts[0]));
-        final decPart = parts.length > 1 ? parts[1] : '';
-        formattedNum = decPart.isNotEmpty ? '$intPart.$decPart' : intPart;
-      }
-    } else {
-      if (price == price.roundToDouble()) {
-        formattedNum = absPrice.toInt().toString();
-      } else {
-        formattedNum = absPrice.toString();
+    final fixedStr = absPrice.toStringAsFixed(maxDecimals);
+    final parts = fixedStr.split('.');
+    final intPart = _noDecimal.format(int.parse(parts[0]));
+    String formattedNum = intPart;
+    if (parts.length > 1) {
+      final decPart = parts[1].replaceAll(RegExp(r'0+$'), '');
+      if (decPart.isNotEmpty) {
+        formattedNum = '$intPart.$decPart';
       }
     }
 
@@ -109,6 +108,66 @@ class FormatUtils {
     final prefix = isNegative ? '-$sym' : sym;
     // Wrapped in LTR isolate (\u202A ... \u202C) so $ always stays locked in front in RTL contexts
     return '\u202A$prefix$formattedNum$scaleLetter\u202C';
+  }
+
+  /// Formats raw numeric value for text input fields without currency symbols or thousand separators:
+  /// - Billion (B USD, Billion USD): max 3 decimals, stripped zeros (e.g. 831.737, 2450.5)
+  /// - Million (M USD, Million USD): max 2 decimals, stripped zeros (e.g. 850)
+  /// - Percent (%): 2 decimals (e.g. 58.78)
+  /// - Standard: standard smart precision without commas
+  static String formatInputNumberForUnit(double price, String? quoteCurrency) {
+    if (quoteCurrency != null) {
+      final upper = quoteCurrency.trim().toUpperCase();
+      final isBillion = upper == 'B USD' ||
+          upper == 'BILLION USD' ||
+          upper == 'B' ||
+          upper == 'BILLION' ||
+          upper.startsWith('B ') ||
+          upper.endsWith(' B');
+      if (isBillion) {
+        final fixedStr = price.abs().toStringAsFixed(3);
+        final parts = fixedStr.split('.');
+        final intPart = parts[0];
+        if (parts.length > 1) {
+          final decPart = parts[1].replaceAll(RegExp(r'0+$'), '');
+          final res = decPart.isNotEmpty ? '$intPart.$decPart' : intPart;
+          return price < 0 ? '-$res' : res;
+        }
+        return price < 0 ? '-$intPart' : intPart;
+      }
+
+      final isMillion = upper == 'M USD' ||
+          upper == 'MILLION USD' ||
+          upper == 'M' ||
+          upper == 'MILLION' ||
+          upper.startsWith('M ') ||
+          upper.endsWith(' M');
+      if (isMillion) {
+        final fixedStr = price.abs().toStringAsFixed(2);
+        final parts = fixedStr.split('.');
+        final intPart = parts[0];
+        if (parts.length > 1) {
+          final decPart = parts[1].replaceAll(RegExp(r'0+$'), '');
+          final res = decPart.isNotEmpty ? '$intPart.$decPart' : intPart;
+          return price < 0 ? '-$res' : res;
+        }
+        return price < 0 ? '-$intPart' : intPart;
+      }
+
+      if (upper == '%') {
+        return price.toStringAsFixed(2);
+      }
+    }
+
+    if (price >= 1000) {
+      return price.toStringAsFixed(2);
+    } else if (price >= 1) {
+      return price.toStringAsFixed(4);
+    } else if (price >= 0.0001) {
+      return price.toStringAsFixed(6);
+    } else {
+      return price.toStringAsFixed(8);
+    }
   }
 
   /// Formats any double price with intelligent precision based on its scale:
@@ -131,6 +190,12 @@ class FormatUtils {
       if (scaled != null) {
         return scaled;
       }
+    }
+
+    // 1b. Check for percentage unit (BTC.D, USDT.D, etc.)
+    if (currencySymbol != null && currencySymbol.trim() == '%') {
+      final fixed = price.toStringAsFixed(2);
+      return showSymbol ? '$fixed%' : fixed;
     }
 
     String formattedNumber;

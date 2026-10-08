@@ -188,6 +188,24 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
     );
   }
 
+  String? _resolveLogCurrency(NotificationLog log) {
+    final sym = log.marketSymbol.toUpperCase();
+    if (sym == 'TOTAL' || sym == 'TOTAL2' || sym == 'TOTAL3' || sym.contains('B USD') || sym.contains('/B USD')) {
+      return 'B USD';
+    }
+    if (sym.contains('M USD') || sym.contains('/M USD')) {
+      return 'M USD';
+    }
+    if (sym == 'BTC.D' || sym == 'USDT.D' || sym == 'ETH.D' || sym.endsWith('.D') || sym.contains('%')) {
+      return '%';
+    }
+    if (sym.contains('/')) {
+      final parts = sym.split('/');
+      if (parts.length > 1) return parts[1];
+    }
+    return null;
+  }
+
   Widget _buildLogCard(NotificationLog log, ThemeData theme, bool isDark, String lang) {
     final isWarning = log.message.contains('cooldown') || log.message.contains('Suppressed');
     final isUpward = log.title.contains('🟢') ||
@@ -352,7 +370,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                   Row(
                     children: [
                       Text(
-                        FormatUtils.formatPrice(log.previousPrice!, lang: lang),
+                        FormatUtils.formatPrice(log.previousPrice!, currencySymbol: _resolveLogCurrency(log), lang: lang),
                         style: TextStyle(
                           fontSize: 12,
                           fontFamily: 'monospace',
@@ -365,7 +383,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                         child: Icon(Icons.arrow_forward_rounded, size: 13, color: Colors.grey),
                       ),
                       Text(
-                        FormatUtils.formatPrice(log.triggeredPrice, lang: lang),
+                        FormatUtils.formatPrice(log.triggeredPrice, currencySymbol: _resolveLogCurrency(log), lang: lang),
                         style: TextStyle(
                           fontSize: 13,
                           fontFamily: 'monospace',
@@ -386,7 +404,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                         ),
                       ),
                       Text(
-                        FormatUtils.formatPrice(log.triggeredPrice, lang: lang),
+                        FormatUtils.formatPrice(log.triggeredPrice, currencySymbol: _resolveLogCurrency(log), lang: lang),
                         style: TextStyle(
                           fontSize: 13,
                           fontFamily: 'monospace',
@@ -519,7 +537,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                 onTap: () {
                   final textToCopy =
                       '🔔 ${log.marketSymbol} (${log.exchangeId.toUpperCase()})\n'
-                      'Price: ${FormatUtils.formatPrice(log.triggeredPrice, lang: lang)}\n'
+                      'Price: ${FormatUtils.formatPrice(log.triggeredPrice, currencySymbol: _resolveLogCurrency(log), lang: lang)}\n'
                       '${log.title}\n${log.message}\n'
                       'Time: ${log.timestamp}';
                   Clipboard.setData(ClipboardData(text: textToCopy));
