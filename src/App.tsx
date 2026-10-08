@@ -648,8 +648,11 @@ export default function App() {
         if (val > 10000) return val;
       }
     } catch (_) {}
-    return 104500;
+    return 267000;
   });
+
+  // Dedicated per-exchange live prices map so Nobitex, Wallex, etc. never overwrite each other
+  const [exchangeSpecificPrices, setExchangeSpecificPrices] = useState<Record<string, Record<string, { priceTmn: number; priceUsdt: number; change24h: number; high24hTmn?: number; low24hTmn?: number }>>>({});
 
   const [iranianMarketPrices, setIranianMarketPrices] = useState<Record<string, { priceTmn: number; priceUsdt: number; change24h: number; high24hTmn?: number; low24hTmn?: number }>>(() => {
     try {
@@ -751,10 +754,23 @@ export default function App() {
     const isIranianExchange = ['nobitex', 'wallex', 'tabdeal', 'bitbarg', 'abantether', 'ramzinex', 'tetherland', 'sarmayex'].includes(exchangeId.toLowerCase());
     const isTmn = counterCurrency === 'TMN' || counterCurrency === 'IRT';
     const cUpper = coin.toUpperCase();
-    const irData = iranianMarketPrices[cUpper];
+    const exPrices = exchangeSpecificPrices[exchangeId.toLowerCase()];
+    const exData = exPrices ? exPrices[cUpper] : undefined;
+    const irData = exData || iranianMarketPrices[cUpper];
     const binanceMeta = cryptoPrices[cUpper];
-    const rate = usdtTomanRate > 10000 ? usdtTomanRate : 104500;
+    const rate = usdtTomanRate > 10000 ? usdtTomanRate : 267000;
     const lastKnown = lastKnownCoinPrices[cUpper];
+
+    // Special case for USDT counter USDT
+    if (cUpper === 'USDT' && (counterCurrency === 'USDT' || counterCurrency === 'USD')) {
+      return {
+        price: 1.0,
+        unit: '$',
+        high24h: 1.0,
+        low24h: 1.0,
+        change24h: 0,
+      };
+    }
 
     // 1. Iranian Exchange with TMN / IRT Counter Currency
     if (isIranianExchange && isTmn) {
@@ -795,7 +811,7 @@ export default function App() {
       }
 
       // Safe default without jumping to BTC
-      const safeUsd = lastKnown?.priceUsd || 1.0;
+      const safeUsd = lastKnown?.priceUsd || (cUpper === 'USDT' ? 1.0 : 1.0);
       return {
         price: Math.round(safeUsd * rate),
         unit: 'تومان',
@@ -923,7 +939,7 @@ export default function App() {
                   volume24h: priceMap[key].volume,
                 };
               }
-              updateLastKnownCoinPrice(key, Math.round(priceMap[key].price * (usdtTomanRate > 10000 ? usdtTomanRate : 104500)), priceMap[key].price, priceMap[key].high, priceMap[key].low);
+              updateLastKnownCoinPrice(key, Math.round(priceMap[key].price * (usdtTomanRate > 10000 ? usdtTomanRate : 267000)), priceMap[key].price, priceMap[key].high, priceMap[key].low);
             });
             try {
               localStorage.setItem('alarmer_crypto_prices', JSON.stringify(updated));
@@ -982,6 +998,11 @@ export default function App() {
               } catch (_) {}
               return next;
             });
+
+            setExchangeSpecificPrices((prev) => ({
+              ...prev,
+              wallex: irPrices,
+            }));
           }
         }
       } catch (_) {}
@@ -994,6 +1015,8 @@ export default function App() {
           const stats = nobiData?.stats;
           if (stats && typeof stats === 'object') {
             const nobiTmnPrices: Record<string, { priceTmn: number; priceUsdt: number; change24h: number; high24hTmn?: number; low24hTmn?: number }> = {};
+            const curRate = usdtTomanRate > 10000 ? usdtTomanRate : 267000;
+
             Object.keys(stats).forEach((k) => {
               const item = stats[k];
               const parts = k.split('-');
@@ -1015,10 +1038,22 @@ export default function App() {
                     nobiTmnPrices[base].high24hTmn = dayHigh > 0 ? dayHigh / 10 : undefined;
                     nobiTmnPrices[base].low24hTmn = dayLow > 0 ? dayLow / 10 : undefined;
                     nobiTmnPrices[base].change24h = ch;
-                    updateLastKnownCoinPrice(base, tmn, tmn / 104500, dayHigh > 0 ? dayHigh / 10 : undefined, dayLow > 0 ? dayLow / 10 : undefined);
+
+                    if (base === 'USDT') {
+                      nobiTmnPrices[base].priceUsdt = 1.0;
+                      if (tmn > 10000) {
+                        setUsdtTomanRate(tmn);
+                        try {
+                          localStorage.setItem('alarmer_usdt_tmn_rate', tmn.toString());
+                        } catch (_) {}
+                      }
+                      updateLastKnownCoinPrice('USDT', tmn, 1.0, dayHigh > 0 ? dayHigh / 10 : undefined, dayLow > 0 ? dayLow / 10 : undefined);
+                    } else {
+                      updateLastKnownCoinPrice(base, tmn, tmn / curRate, dayHigh > 0 ? dayHigh / 10 : undefined, dayLow > 0 ? dayLow / 10 : undefined);
+                    }
                   } else if (quote === 'USDT') {
                     nobiTmnPrices[base].priceUsdt = latest;
-                    updateLastKnownCoinPrice(base, Math.round(latest * 104500), latest);
+                    updateLastKnownCoinPrice(base, Math.round(latest * curRate), latest);
                   }
                 }
               }
@@ -1031,6 +1066,11 @@ export default function App() {
               } catch (_) {}
               return next;
             });
+
+            setExchangeSpecificPrices((prev) => ({
+              ...prev,
+              nobitex: nobiTmnPrices,
+            }));
           }
         }
       } catch (_) {}
@@ -1043,6 +1083,8 @@ export default function App() {
           const rList = rData?.data;
           if (Array.isArray(rList)) {
             const rPrices: Record<string, { priceTmn: number; priceUsdt: number; change24h: number; high24hTmn?: number; low24hTmn?: number }> = {};
+            const curRate = usdtTomanRate > 10000 ? usdtTomanRate : 267000;
+
             rList.forEach((item) => {
               const base = item?.base_currency_symbol?.en?.toUpperCase();
               const quote = item?.quote_currency_symbol?.en?.toUpperCase();
@@ -1063,10 +1105,15 @@ export default function App() {
                   rPrices[base].high24hTmn = highest > 0 ? highest / 10 : undefined;
                   rPrices[base].low24hTmn = lowest > 0 ? lowest / 10 : undefined;
                   rPrices[base].change24h = ch;
-                  updateLastKnownCoinPrice(base, tmn, tmn / 104500);
+                  if (base === 'USDT') {
+                    rPrices[base].priceUsdt = 1.0;
+                    updateLastKnownCoinPrice('USDT', tmn, 1.0);
+                  } else {
+                    updateLastKnownCoinPrice(base, tmn, tmn / curRate);
+                  }
                 } else if (quote === 'USDT') {
                   rPrices[base].priceUsdt = p;
-                  updateLastKnownCoinPrice(base, Math.round(p * 104500), p);
+                  updateLastKnownCoinPrice(base, Math.round(p * curRate), p);
                 }
               }
             });
@@ -1078,6 +1125,11 @@ export default function App() {
               } catch (_) {}
               return next;
             });
+
+            setExchangeSpecificPrices((prev) => ({
+              ...prev,
+              ramzinex: rPrices,
+            }));
           }
         }
       } catch (_) {}
@@ -1106,17 +1158,20 @@ export default function App() {
           const items = bData?.result?.items;
           if (Array.isArray(items)) {
             const bPrices: Record<string, { priceTmn: number; priceUsdt: number; change24h: number }> = {};
+            const curRate = usdtTomanRate > 10000 ? usdtTomanRate : 267000;
+
             items.forEach((item) => {
               const coin = (item.coin || item.symbol || '').toUpperCase();
               const usd = parseFloat(item.price || '0');
               const ch = parseFloat(item.percent || '0');
-              if (coin && usd > 0) {
+              // Skip overwriting USDT with generic broker rate
+              if (coin && usd > 0 && coin !== 'USDT') {
                 bPrices[coin] = {
-                  priceTmn: Math.round(usd * (usdtTomanRate > 10000 ? usdtTomanRate : 104500)),
+                  priceTmn: Math.round(usd * curRate),
                   priceUsdt: usd,
                   change24h: ch,
                 };
-                updateLastKnownCoinPrice(coin, Math.round(usd * (usdtTomanRate > 10000 ? usdtTomanRate : 104500)), usd);
+                updateLastKnownCoinPrice(coin, Math.round(usd * curRate), usd);
               }
             });
 
@@ -1127,6 +1182,11 @@ export default function App() {
               } catch (_) {}
               return next;
             });
+
+            setExchangeSpecificPrices((prev) => ({
+              ...prev,
+              bitbarg: bPrices,
+            }));
           }
         }
       } catch (_) {}
@@ -1532,7 +1592,9 @@ export default function App() {
         rule,
         title,
         body,
-        value: `${unit}${newPrice.toLocaleString()}`,
+        value: (unit === 'تومان' || rule.exchangeId?.toLowerCase() === 'nobitex' || rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT')
+          ? `${Math.round(newPrice).toLocaleString('fa-IR')} تومان`
+          : `${unit}${newPrice.toLocaleString()}`,
         timestamp: now,
         effectiveSound,
         effectiveVibration,
@@ -1701,8 +1763,10 @@ export default function App() {
 
     const meta = cryptoPrices[selectedCryptoCoin] || cryptoPrices.BTC;
     const totalSecs = calculateTotalSeconds(unitType, unitNumber);
-    const mkt = getCryptoMarketPrice(selectedCryptoCoin, selectedExchange.id, selectedCounterCurrency);
-    const counterCur = selectedCounterCurrency || selectedExchange.defaultCounter;
+    const counterCur = (selectedExchange.id?.toLowerCase() === 'nobitex' && (!selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT'))
+      ? 'TMN'
+      : (selectedCounterCurrency || selectedExchange.defaultCounter);
+    const mkt = getCryptoMarketPrice(selectedCryptoCoin, selectedExchange.id, counterCur);
 
     const newRule: AlertRule = {
       uuid: `rule-crypto-${Date.now()}`,
@@ -1739,7 +1803,10 @@ export default function App() {
     setShowCreateModal(false);
     setCreatePath('NONE');
     setCryptoStep(1);
-    showToast(`هشدار کریپتو برای ${selectedCryptoCoin} فعال شد.`);
+    const isTmnRule = selectedExchange.id?.toLowerCase() === 'nobitex' || counterCur === 'TMN' || mkt.unit === 'تومان';
+    showToast(isTmnRule
+      ? `هشدار برای ${selectedCryptoCoin} (${Math.round(val).toLocaleString('fa-IR')} تومان) در ${selectedExchange.name} فعال شد.`
+      : `هشدار کریپتو برای ${selectedCryptoCoin} فعال شد.`);
   };
 
   const handleCreateMacroSubmit = (e: React.FormEvent) => {
@@ -2782,22 +2849,36 @@ export default function App() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0" dir="ltr">
-                          <span className="font-mono font-black text-xs text-white block">
-                            ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: currentPrice < 1 ? 4 : 2 })}
-                          </span>
-                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border font-mono ${badge.bgClass}`}>
-                            {badge.text}
-                          </span>
-                        </div>
+                        {(() => {
+                          const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                          return (
+                            <div className="flex items-center gap-1.5 shrink-0" dir="ltr">
+                              <span className="font-mono font-black text-xs text-white block">
+                                {isTmnRule
+                                  ? `${Math.round(currentPrice).toLocaleString('fa-IR')} تومان`
+                                  : `$${currentPrice.toLocaleString(undefined, { minimumFractionDigits: currentPrice < 1 ? 4 : 2 })}`}
+                              </span>
+                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border font-mono ${badge.bgClass}`}>
+                                {badge.text}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Progress Bar & Status */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-[10px] gap-2">
-                          <span className="text-slate-400 truncate">
-                            شرط: {rule.conditionType === 'PRICE_THRESHOLD' ? `${rule.direction === 'ABOVE' ? '≥' : '≤'} $${rule.targetValue.toLocaleString()}` : `تغییر ${rule.targetValue}%`}
-                          </span>
+                          {(() => {
+                            const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                            return (
+                              <span className="text-slate-400 truncate">
+                                شرط: {rule.conditionType === 'PRICE_THRESHOLD'
+                                  ? `${rule.direction === 'ABOVE' ? '≥' : '≤'} ${isTmnRule ? `${Math.round(rule.targetValue).toLocaleString('fa-IR')} تومان` : `$${rule.targetValue.toLocaleString()}`}`
+                                  : `تغییر ${rule.targetValue}%`}
+                              </span>
+                            );
+                          })()}
                           <span className={`font-mono font-bold text-[9.5px] shrink-0 ${isTriggered ? 'text-rose-400' : isNearTarget ? 'text-amber-400' : 'text-emerald-400'}`} dir="ltr">
                             {isTriggered ? 'Triggered' : isNearTarget ? `${targetProximity}% (Near)` : `${targetProximity}%`}
                           </span>
@@ -3040,6 +3121,7 @@ export default function App() {
                           key={ex.id}
                           onClick={() => {
                             setSelectedExchange(ex);
+                            setSelectedCounterCurrency(ex.defaultCounter || 'TMN');
                             setCryptoStep(2);
                           }}
                           className={`w-full p-3 rounded-2xl border text-right flex items-center justify-between transition-all ${
@@ -3057,7 +3139,13 @@ export default function App() {
                                 <span className="font-bold text-sm text-white">{ex.name}</span>
                                 <span className="text-[10px] text-slate-400">{ex.countryBadge}</span>
                               </div>
-                              <div className="text-[10px] text-slate-500">جفت‌ارز مبنا: {ex.defaultCounter} • موجودی: ~{ex.pairsCount}</div>
+                              <div className="text-[10px] text-slate-500">
+                                {ex.id === 'nobitex' ? (
+                                  <span>جفت‌ارز مبنا: <strong className="text-emerald-400">تومان (TMN)</strong> • ۵۳۱+ جفت‌ارز زنده • نرخ تتر: <strong className="text-white font-mono">{Math.round(usdtTomanRate > 10000 ? usdtTomanRate : 267000).toLocaleString('fa-IR')} تومان</strong></span>
+                                ) : (
+                                  <span>جفت‌ارز مبنا: {ex.defaultCounter === 'TMN' ? 'تومان (TMN)' : ex.defaultCounter} • موجودی: ~{ex.pairsCount}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <span className="text-emerald-400 text-xs font-bold">انتخاب →</span>
@@ -3073,7 +3161,14 @@ export default function App() {
                     <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                       <div>
                         <span className="text-slate-400 text-[10px] block">صرافی انتخاب‌شده:</span>
-                        <strong className="text-white text-xs font-bold">{selectedExchange.name}</strong>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-white text-xs font-bold">{selectedExchange.name}</strong>
+                          {selectedExchange.id === 'nobitex' && (
+                            <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
+                              نمایش قیمت‌ها به تومان 🇮🇷
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => {
@@ -3104,9 +3199,12 @@ export default function App() {
                         .filter(sym => !cryptoSearchQuery || sym.toLowerCase().includes(cryptoSearchQuery.toLowerCase()))
                         .map((sym) => {
                           const meta = cryptoPrices[sym] || { nameFa: sym, currentPrice: 1.0, icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png' };
-                          const counter = selectedCounterCurrency || selectedExchange.defaultCounter;
+                          const counter = (selectedExchange.id === 'nobitex' && (!selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT'))
+                            ? 'TMN'
+                            : (selectedCounterCurrency || selectedExchange.defaultCounter);
                           const mkt = getCryptoMarketPrice(sym, selectedExchange.id, counter);
-                          const priceDisplay = mkt.unit === 'تومان'
+                          const isNobitexOrTmn = selectedExchange.id === 'nobitex' || mkt.unit === 'تومان' || counter === 'TMN';
+                          const priceDisplay = isNobitexOrTmn
                             ? `${Math.round(mkt.price).toLocaleString('fa-IR')} تومان`
                             : `${mkt.unit}${mkt.price < 1 ? mkt.price.toFixed(6) : mkt.price.toLocaleString()}`;
 
@@ -3157,6 +3255,42 @@ export default function App() {
                 {/* Crypto Step 3: Frequency & Condition */}
                 {cryptoStep === 3 && (
                   <form onSubmit={handleCreateCryptoSubmit} className="space-y-4 text-xs">
+                    {/* Selected Asset & Live Nobitex / Exchange Market Price Bar */}
+                    {(() => {
+                      const counter = (selectedExchange.id === 'nobitex' && (!selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT'))
+                        ? 'TMN'
+                        : (selectedCounterCurrency || selectedExchange.defaultCounter);
+                      const mkt = getCryptoMarketPrice(selectedCryptoCoin, selectedExchange.id, counter);
+                      const isTmn = selectedExchange.id === 'nobitex' || mkt.unit === 'تومان' || counter === 'TMN' || counter === 'IRT';
+                      const meta = cryptoPrices[selectedCryptoCoin] || { nameFa: selectedCryptoCoin, icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png' };
+                      return (
+                        <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 border border-emerald-500/30 flex items-center justify-between shadow-sm">
+                          <div className="flex items-center gap-2.5">
+                            <img src={meta.icon || 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png'} alt={selectedCryptoCoin} className="h-9 w-9 rounded-full border border-slate-700 p-0.5 bg-slate-950" />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-sm text-white">{meta.nameFa || selectedCryptoCoin} ({selectedCryptoCoin})</span>
+                                <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-semibold">{selectedExchange.name}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                {isTmn ? (
+                                  <span>مبنای هشدار: <strong className="text-emerald-400">تومان ({selectedExchange.name})</strong></span>
+                                ) : (
+                                  <span>مبنای هشدار: <strong className="text-emerald-400">{counter}</strong></span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-left" dir="ltr">
+                            <span className="text-[10px] text-slate-400 block font-semibold">نرخ لحظه‌ای:</span>
+                            <span className="font-mono font-black text-sm text-emerald-400">
+                              {isTmn ? `${Math.round(mkt.price).toLocaleString('fa-IR')} تومان` : `$${mkt.price < 1 ? mkt.price.toFixed(6) : mkt.price.toLocaleString()}`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div>
                       <label className="block text-slate-300 font-bold mb-1.5">
                         ۱. دوره بررسی قیمت (Check Frequency):
@@ -3292,16 +3426,20 @@ export default function App() {
                       <div className="space-y-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
                         {/* 24h High & Low 1-Tap Auto-Fill Presets */}
                         {(() => {
-                          const counter = selectedCounterCurrency || selectedExchange.defaultCounter;
+                          const counter = (selectedExchange.id?.toLowerCase() === 'nobitex' && (!selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT'))
+                            ? 'TMN'
+                            : (selectedCounterCurrency || selectedExchange.defaultCounter);
                           const mkt = getCryptoMarketPrice(selectedCryptoCoin, selectedExchange.id, counter);
                           const curP = mkt.price;
                           const h24 = mkt.high24h || curP * 1.025;
                           const l24 = mkt.low24h || curP * 0.975;
-                          const isTmn = mkt.unit === 'تومان';
+                          const isTmn = selectedExchange.id?.toLowerCase() === 'nobitex' || mkt.unit === 'تومان' || counter === 'TMN' || counter === 'IRT';
 
                           return (
                             <div className="space-y-1">
-                              <span className="text-[10px] text-slate-400 block font-semibold">تک‌لمس سریع بر اساس سقف و کف روزانه ({selectedExchange.name}):</span>
+                              <span className="text-[10px] text-slate-400 block font-semibold">
+                                تک‌لمس سریع بر اساس سقف و کف روزانه ({selectedExchange.name} {isTmn ? 'به تومان' : ''}):
+                              </span>
                               <div className="grid grid-cols-2 gap-2">
                                 <button
                                   type="button"
@@ -3314,10 +3452,10 @@ export default function App() {
                                       setDirection('ABOVE');
                                     }
                                   }}
-                                  className="py-1 px-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] flex items-center justify-between transition-all"
+                                  className="py-1.5 px-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] flex items-center justify-between transition-all"
                                 >
                                   <span>🔼 سقف ۲۴h:</span>
-                                  <span className="font-mono font-black">{isTmn ? `${Math.round(h24).toLocaleString('fa-IR')} ت` : `$${h24.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</span>
+                                  <span className="font-mono font-black">{isTmn ? `${Math.round(h24).toLocaleString('fa-IR')} تومان` : `$${h24.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</span>
                                 </button>
                                 <button
                                   type="button"
@@ -3330,10 +3468,10 @@ export default function App() {
                                       setDirection('BELOW');
                                     }
                                   }}
-                                  className="py-1 px-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-[10px] flex items-center justify-between transition-all"
+                                  className="py-1.5 px-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-[10px] flex items-center justify-between transition-all"
                                 >
                                   <span>🔽 کف ۲۴h:</span>
-                                  <span className="font-mono font-black">{isTmn ? `${Math.round(l24).toLocaleString('fa-IR')} ت` : `$${l24.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</span>
+                                  <span className="font-mono font-black">{isTmn ? `${Math.round(l24).toLocaleString('fa-IR')} تومان` : `$${l24.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</span>
                                 </button>
                               </div>
                             </div>
@@ -3404,71 +3542,117 @@ export default function App() {
                               </div>
                             </div>
 
-                            <div className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-2">
-                              <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
-                                <span>🔼 حد بالا (مقاومت / سیو سود)</span>
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Upper Price (قیمت حد بالا):</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={upperPriceStr}
-                                  onChange={(e) => setUpperPriceStr(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
-                                  placeholder="4.00"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Upper Note (یادداشت حد بالا):</label>
-                                <input
-                                  type="text"
-                                  value={upperNote}
-                                  onChange={(e) => setUpperNote(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
-                                  placeholder="«رسید به مقاومت، بررسی کن»"
-                                />
-                              </div>
-                            </div>
+                            {(() => {
+                              const counter = (selectedExchange.id?.toLowerCase() === 'nobitex' && (!selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT'))
+                                ? 'TMN'
+                                : (selectedCounterCurrency || selectedExchange.defaultCounter);
+                              const mkt = getCryptoMarketPrice(selectedCryptoCoin, selectedExchange.id, counter);
+                              const isTmn = selectedExchange.id?.toLowerCase() === 'nobitex' || mkt.unit === 'تومان' || counter === 'TMN' || counter === 'IRT';
+                              const h24 = mkt.high24h || mkt.price * 1.025;
+                              const l24 = mkt.low24h || mkt.price * 0.975;
 
-                            <div className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2">
-                              <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs">
-                                <span>🔽 حد پایین (حمایت / حد ضرر)</span>
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Lower Price (قیمت حد پایین):</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={lowerPriceStr}
-                                  onChange={(e) => setLowerPriceStr(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
-                                  placeholder="2.00"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Lower Note (یادداشت حد پایین):</label>
-                                <input
-                                  type="text"
-                                  value={lowerNote}
-                                  onChange={(e) => setLowerNote(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
-                                  placeholder="«حمایت شکست، بفروش»"
-                                />
-                              </div>
-                            </div>
+                              return (
+                                <>
+                                  <div className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-2">
+                                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                                      <span>🔼 حد بالا (مقاومت / سیو سود)</span>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">
+                                        {isTmn ? 'قیمت حد بالا (تومان):' : 'Upper Price (قیمت حد بالا):'}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        step={isTmn ? "1" : "0.01"}
+                                        value={upperPriceStr}
+                                        onChange={(e) => setUpperPriceStr(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
+                                        placeholder={isTmn ? `مثال: ${Math.round(h24)}` : "4.00"}
+                                      />
+                                      {isTmn && upperPriceStr && (
+                                        <div className="text-[10px] text-emerald-400 font-mono mt-0.5 font-semibold">
+                                          معادل: {Math.round(parseFloat(upperPriceStr) || 0).toLocaleString('fa-IR')} تومان
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">Upper Note (یادداشت حد بالا):</label>
+                                      <input
+                                        type="text"
+                                        value={upperNote}
+                                        onChange={(e) => setUpperNote(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
+                                        placeholder="«رسید به مقاومت، بررسی کن»"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2">
+                                    <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs">
+                                      <span>🔽 حد پایین (حمایت / حد ضرر)</span>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">
+                                        {isTmn ? 'قیمت حد پایین (تومان):' : 'Lower Price (قیمت حد پایین):'}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        step={isTmn ? "1" : "0.01"}
+                                        value={lowerPriceStr}
+                                        onChange={(e) => setLowerPriceStr(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
+                                        placeholder={isTmn ? `مثال: ${Math.round(l24)}` : "2.00"}
+                                      />
+                                      {isTmn && lowerPriceStr && (
+                                        <div className="text-[10px] text-rose-400 font-mono mt-0.5 font-semibold">
+                                          معادل: {Math.round(parseFloat(lowerPriceStr) || 0).toLocaleString('fa-IR')} تومان
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">Lower Note (یادداشت حد پایین):</label>
+                                      <input
+                                        type="text"
+                                        value={lowerNote}
+                                        onChange={(e) => setLowerNote(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
+                                        placeholder="«حمایت شکست، بفروش»"
+                                      />
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <div>
-                            <label className="block text-slate-400 mb-1">قیمت هدف (دلار):</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={targetValueStr}
-                              onChange={(e) => setTargetValueStr(e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold"
-                              placeholder="مثال: 95000"
-                            />
+                            {(() => {
+                              const counter = (selectedExchange.id?.toLowerCase() === 'nobitex' && (!selectedCounterCurrency || selectedCounterCurrency === 'TMN' || selectedCounterCurrency === 'IRT'))
+                                ? 'TMN'
+                                : (selectedCounterCurrency || selectedExchange.defaultCounter);
+                              const mkt = getCryptoMarketPrice(selectedCryptoCoin, selectedExchange.id, counter);
+                              const isTmn = selectedExchange.id?.toLowerCase() === 'nobitex' || mkt.unit === 'تومان' || counter === 'TMN' || counter === 'IRT';
+                              return (
+                                <>
+                                  <label className="block text-slate-400 mb-1">
+                                    {isTmn ? 'قیمت هدف (تومان):' : 'قیمت هدف (دلار):'}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step={isTmn ? "1" : "0.01"}
+                                    value={targetValueStr}
+                                    onChange={(e) => setTargetValueStr(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold"
+                                    placeholder={isTmn ? `مثال: ${Math.round(mkt.price)}` : "مثال: 95000"}
+                                  />
+                                  {isTmn && targetValueStr && (
+                                    <div className="text-[10px] text-emerald-400 font-mono mt-1 font-semibold">
+                                      معادل: {Math.round(parseFloat(targetValueStr) || 0).toLocaleString('fa-IR')} تومان
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -4266,17 +4450,29 @@ export default function App() {
                           <span className="text-[9px] px-1 rounded bg-slate-800 text-slate-400">{formatExchangeTag(rule.exchangeName)}</span>
                           {rule.ttsEnabled && <Volume2 className="h-3 w-3 text-violet-400" />}
                         </div>
-                        <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <span>هدف: {rule.conditionType === 'PRICE_THRESHOLD' ? `$${rule.targetValue}` : `${rule.targetValue}%`}</span>
-                          <span>•</span>
-                          <span className={isTriggered ? 'text-rose-400 font-bold' : isNearTarget ? 'text-amber-400 font-bold' : 'text-emerald-400'}>
-                            {targetProximity}% تا هدف
-                          </span>
-                        </div>
+                        {(() => {
+                          const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                          return (
+                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <span>هدف: {rule.conditionType === 'PRICE_THRESHOLD' ? (isTmnRule ? `${Math.round(rule.targetValue).toLocaleString('fa-IR')} تومان` : `$${rule.targetValue}`) : `${rule.targetValue}%`}</span>
+                              <span>•</span>
+                              <span className={isTriggered ? 'text-rose-400 font-bold' : isNearTarget ? 'text-amber-400 font-bold' : 'text-emerald-400'}>
+                                {targetProximity}% تا هدف
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div className="text-right">
-                        <span className="font-mono font-bold text-white block">${currentPrice.toLocaleString()}</span>
+                        {(() => {
+                          const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                          return (
+                            <span className="font-mono font-bold text-white block">
+                              {isTmnRule ? `${Math.round(currentPrice).toLocaleString('fa-IR')} تومان` : `$${currentPrice.toLocaleString()}`}
+                            </span>
+                          );
+                        })()}
                         <button
                           onClick={() => evaluateRule(rule, 1.5)}
                           className="text-[10px] text-emerald-400 hover:underline cursor-pointer"

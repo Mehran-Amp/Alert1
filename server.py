@@ -1819,10 +1819,13 @@ def format_alert_registered_telegram_msg(alert: Any) -> str:
     if cond_type == "percentChange" and percent_val:
         target_repr = f"{percent_val:g}%"
     else:
-        if target_price < 1:
-            target_repr = f"{target_price:,.4f}".rstrip('0').rstrip('.')
+        is_tmn = getattr(alert, 'exchange', '').lower() == 'nobitex' or getattr(alert, 'symbol', '').endswith(('TMN', 'IRT'))
+        if is_tmn:
+            target_repr = f"{int(target_price):,} تومان"
+        elif target_price < 1:
+            target_repr = f"${target_price:,.4f}".rstrip('0').rstrip('.')
         else:
-            target_repr = f"{target_price:,.2f}"
+            target_repr = f"${target_price:,.2f}"
 
     features = []
     interval_sec = getattr(alert, 'check_interval_seconds', 180)
@@ -2130,8 +2133,8 @@ async def check_alerts_job():
             display_symbol = alert.symbol
             pct_str = f"{sign}{abs(((current_price - triggered_target) / triggered_target) * 100.0):.2f}%" if (triggered_target and triggered_target > 0) else ""
             price_formatted = f"${current_price:,.4f}".rstrip('0').rstrip('.') if current_price < 1 else f"${current_price:,.2f}"
-            if alert.symbol.endswith('TMN') or alert.symbol.endswith('IRT'):
-                price_formatted = f"{int(current_price):,} ت"
+            if alert.symbol.endswith('TMN') or alert.symbol.endswith('IRT') or getattr(alert, 'exchange', '').lower() == 'nobitex':
+                price_formatted = f"{int(current_price):,} تومان"
             if '/' not in display_symbol:
                 for quote in ['USDT', 'USDC', 'BUSD', 'FDUSD', 'EUR', 'USD', 'TMN', 'IRT', 'BTC', 'ETH']:
                     if display_symbol.endswith(quote):

@@ -50,11 +50,11 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   let displayName = rule.marketSymbol;
   const resolveUnit = (curr: string) => {
     const c = (curr || '').toUpperCase().trim();
-    if (c === 'TMN' || c === 'IRT' || c === 'TOMAN' || curr === '\u062A\u0648\u0645\u0627\u0646' || curr === '\u062A') {
-      return isFa ? FA.toman : 'IRT';
+    if (c === 'TMN' || c === 'IRT' || c === 'TOMAN' || curr === 'تومان' || curr === 'ت' || (rule.exchangeId && rule.exchangeId.toLowerCase() === 'nobitex' && (c === 'TMN' || c === 'IRT' || !curr))) {
+      return 'تومان';
     }
-    if (c === 'IRR' || c === 'RLS' || curr === '\u0631\u06CC\u0627\u0644') {
-      return isFa ? FA.rial : 'IRR';
+    if (c === 'IRR' || c === 'RLS' || curr === 'ریال') {
+      return 'ریال';
     }
     return curr || '$';
   };
@@ -310,8 +310,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                         <>{rule.targetValue.toFixed(2)}%</>
                       ) : (
                         <>
-                          {unit}
-                          {rule.targetValue.toLocaleString()}
+                          {unit === '$' ? `$${rule.targetValue.toLocaleString()}` : `${rule.targetValue.toLocaleString()} ${unit}`}
                         </>
                       ))}
                   </span>
