@@ -305,14 +305,72 @@ class AlertPublic(BaseModel):
 
 DB_FILE = "alerts_data.json"
 
-def load_alerts_from_disk() -> List[Alert]:
-    if os.path.exists(DB_FILE):
+def repair_mojibake(s: Optional[str]) -> Optional[str]:
+    """Repairs Mojibake corrupted Persian/Arabic strings (Ã, Ø, Ù, Â) up to 3 passes."""
+    if not s or not isinstance(s, str):
+        return s
+    current = s
+    cp1252_map = {
+        0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84,
+        0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88,
+        0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C,
+        0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93,
+        0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97,
+        0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B,
+        0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F
+    }
+    for _ in range(3):
+        if not any(c in current for c in 'ÃØÙÂ'):
+            break
+        bytes_list = []
+        possible = True
+        for ch in current:
+            code = ord(ch)
+            if code <= 0xFF:
+                bytes_list.append(code)
+            elif code in cp1252_map:
+                bytes_list.append(cp1252_map[code])
+            else:
+                possible = False
+                break
+        if not possible or not bytes_list:
+            break
         try:
-            with open(DB_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return [Alert(**item) for item in data]
-        except Exception as e:
-            print(f"⚠️ Error loading alerts disk DB: {e}")
+            decoded = bytes(bytes_list).decode('utf-8')
+            current = decoded
+        except UnicodeDecodeError:
+            break
+    return current
+
+def load_alerts_from_disk() -> List[Alert]:
+    for target in [DB_FILE, "alerts.json"]:
+        if os.path.exists(target):
+            try:
+                # Backup before loading and repairing
+                backup_file = f"{target}.bak"
+                if not os.path.exists(backup_file):
+                    try:
+                        import shutil
+                        shutil.copy2(target, backup_file)
+                        print(f"📦 [Backup] Created initial backup: {backup_file}")
+                    except Exception as be:
+                        print(f"⚠️ [Backup] Warning backing up {target}: {be}")
+                with open(target, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    alerts = []
+                    for item in data:
+                        if isinstance(item, dict):
+                            for k in ['counter_currency', 'note', 'upper_note', 'lower_note', 'base_currency']:
+                                if item.get(k):
+                                    item[k] = repair_mojibake(item[k])
+                            if isinstance(item.get('raw_rule'), dict):
+                                for rk in ['counterCurrency', 'customNote', 'upperNote', 'lowerNote', 'unit']:
+                                    if item['raw_rule'].get(rk):
+                                        item['raw_rule'][rk] = repair_mojibake(item['raw_rule'][rk])
+                            alerts.append(Alert(**item))
+                    return alerts
+            except Exception as e:
+                print(f"⚠️ Error loading alerts disk DB: {e}")
     return []
 
 async def save_alerts_to_disk_async(alerts: List[Alert]):

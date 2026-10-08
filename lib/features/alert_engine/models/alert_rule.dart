@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/utils/mojibake_repair_helper.dart';
 import '../../exchanges/base/currency_pair.dart';
 import 'alert_type.dart';
 import 'trigger_mode.dart';
@@ -441,9 +442,9 @@ class AlertRule extends Equatable {
 
   factory AlertRule.fromJson(Map<String, dynamic> json) => AlertRule(
         uuid: json['uuid'] as String,
-        baseCurrency: json['baseCurrency'] as String,
-        counterCurrency: json['counterCurrency'] as String,
-        marketSymbol: json['marketSymbol'] as String,
+        baseCurrency: repairMojibake(json['baseCurrency'] as String?) ?? (json['baseCurrency'] as String? ?? 'BTC'),
+        counterCurrency: repairMojibake(json['counterCurrency'] as String?) ?? (json['counterCurrency'] as String? ?? 'USDT'),
+        marketSymbol: repairMojibake(json['marketSymbol'] as String?) ?? (json['marketSymbol'] as String? ?? ''),
         exchangeId: json['exchangeId'] as String,
         checkIntervalSeconds: json['checkIntervalSeconds'] as int? ?? 30,
         conditionType: AlertConditionType.values.byName(
@@ -460,9 +461,9 @@ class AlertRule extends Equatable {
             .byName(json['triggerMode'] as String? ?? 'recurring'),
         targetPrice: (json['targetPrice'] as num?)?.toDouble(),
         upperTargetPrice: (json['upperTargetPrice'] as num?)?.toDouble(),
-        upperNote: json['upperNote'] as String?,
+        upperNote: repairMojibake(json['upperNote'] as String?),
         lowerTargetPrice: (json['lowerTargetPrice'] as num?)?.toDouble(),
-        lowerNote: json['lowerNote'] as String?,
+        lowerNote: repairMojibake(json['lowerNote'] as String?),
         percent: (json['percent'] as num?)?.toDouble(),
         deltaAbsolute: (json['deltaAbsolute'] as num?)?.toDouble(),
         volumePercent: (json['volumePercent'] as num?)?.toDouble(),
@@ -470,7 +471,7 @@ class AlertRule extends Equatable {
         lastCheckedPrice: (json['lastCheckedPrice'] as num?)?.toDouble(),
         previousPrice: (json['previousPrice'] as num?)?.toDouble() ?? (json['previous_price'] as num?)?.toDouble(),
         baseVolume: (json['baseVolume'] as num?)?.toDouble(),
-        customNote: json['customNote'] as String?,
+        customNote: repairMojibake(json['customNote'] as String?),
         customSound: json['customSound'] as String?,
         language: json['language'] as String?,
         soundEnabled: json['soundEnabled'] as bool? ?? true,

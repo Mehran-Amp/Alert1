@@ -33,6 +33,15 @@ class JsonAlertRuleRepository {
     try {
       final file = _file;
       if (await file.exists()) {
+        try {
+          final backupFile = File('${file.path}.bak');
+          if (!await backupFile.exists()) {
+            await file.copy(backupFile.path);
+            debugPrint('📦 [Backup] Created alerts backup at: ${backupFile.path}');
+          }
+        } catch (be) {
+          debugPrint('⚠️ [Backup] Warning backing up alerts file: $be');
+        }
         final content = await file.readAsString();
         if (content.trim().isNotEmpty) {
           final dynamic decoded = jsonDecode(content);

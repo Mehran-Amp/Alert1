@@ -28,6 +28,10 @@ define('REQ_START', microtime(true));
 error_reporting(E_ALL);
 @ini_set('log_errors', '1');
 @ini_set('serialize_precision', '-1'); // clean floats (150.9, not 150.90000000000001)
+@ini_set('default_charset', 'UTF-8');
+if (function_exists('mb_internal_encoding')) {
+    @mb_internal_encoding('UTF-8');
+}
 @set_time_limit(30);
 
 header('Content-Type: application/json; charset=utf-8');
