@@ -44,7 +44,9 @@ import {
   Zap,
   LayoutGrid,
   Mic,
-  User
+  User,
+  BatteryCharging,
+  Send
 } from 'lucide-react';
 import { AlarmCard } from './components/AlarmCard';
 import { FA } from './i18n/fa';
@@ -2115,35 +2117,40 @@ export default function App() {
                 {mobileScreen === 'settings' && (
                   <div className="space-y-4">
                     {/* ======================================================== */}
-                    {/* SECTION 1: LOGIN & TELEGRAM BOT                          */}
+                    {/* SECTION 1: بخش لاگین (LOGIN & GOOGLE ACCOUNT)            */}
                     {/* ======================================================== */}
                     <div className={`p-4 rounded-2xl border transition-all ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-3`}>
                       <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-emerald-400" />
                           <h4 className="font-bold text-xs text-white">
-                            {currentLang === 'fa' ? '۱. لاگین و ربات تلگرام' : '1. Login & Telegram Bot'}
+                            {currentLang === 'fa' ? '۱. حساب کاربری و ورود (Login)' : '1. User Account & Login'}
                           </h4>
                         </div>
+                        {googleUser && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                            👑 VIP Active
+                          </span>
+                        )}
                       </div>
 
                       {/* Google Sign-In Card */}
-                      <div className={`p-3 rounded-xl border flex items-center justify-between ${googleUser ? 'bg-amber-950/20 border-amber-500/30' : 'bg-slate-950 border-slate-800'}`}>
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="h-9 w-9 rounded-xl bg-slate-800 flex items-center justify-center text-sm font-bold shrink-0">
-                            {googleUser ? '👑' : <User className="h-4 w-4 text-slate-300" />}
+                      <div className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${googleUser ? 'bg-amber-950/20 border-amber-500/30' : 'bg-slate-950 border-slate-800'}`}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0 ${googleUser ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300' : 'bg-slate-800 text-slate-300'}`}>
+                            {googleUser ? '👑' : <User className="h-5 w-5 text-slate-300" />}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <span className="font-bold text-xs text-white truncate">
-                                {googleUser ? googleUser.name : (currentLang === 'fa' ? 'کاربر مهمان' : 'Guest Mode')}
+                                {googleUser ? googleUser.name : (currentLang === 'fa' ? 'کاربر مهمان (Guest Mode)' : 'Guest Mode')}
                               </span>
                               <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${googleUser ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}`}>
                                 {googleUser ? 'PREMIUM' : (currentLang === 'fa' ? 'اختیاری' : 'Optional')}
                               </span>
                             </div>
                             <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
-                              {googleUser ? googleUser.email : (currentLang === 'fa' ? 'ورود با حساب گوگل جهت همگام‌سازی ابری' : 'Sign in for cloud backup & premium access')}
+                              {googleUser ? googleUser.email : (currentLang === 'fa' ? 'ورود با حساب گوگل جهت همگام‌سازی ابری و دسترسی نامحدود' : 'Sign in for cloud backup & multi-device sync')}
                             </span>
                           </div>
                         </div>
@@ -2155,41 +2162,74 @@ export default function App() {
                               localStorage.removeItem('alarmer_google_user');
                               showToast(currentLang === 'fa' ? 'از حساب گوگل خارج شدید.' : 'Signed out of Google account.');
                             }}
-                            className="px-2.5 py-1 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 text-[10px] font-bold hover:bg-rose-500/20 transition-all cursor-pointer shrink-0"
+                            className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 text-[11px] font-bold hover:bg-rose-500/20 transition-all cursor-pointer shrink-0"
                           >
-                            {currentLang === 'fa' ? 'خروج' : 'Sign Out'}
+                            {currentLang === 'fa' ? 'خروج از حساب' : 'Sign Out'}
                           </button>
                         ) : (
                           <button
                             onClick={() => setShowGoogleModal(true)}
-                            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 shadow-sm transition-all ${accentBgClass} text-slate-950 hover:brightness-110 cursor-pointer shrink-0`}
+                            className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all ${accentBgClass} text-slate-950 hover:brightness-110 cursor-pointer shrink-0`}
                           >
                             <span>{currentLang === 'fa' ? 'ورود با گوگل' : 'Sign In'}</span>
                           </button>
                         )}
                       </div>
+                    </div>
 
-                      {/* Telegram Bot Integration Card */}
-                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                    {/* ======================================================== */}
+                    {/* SECTION 2: بخش تلگرام (TELEGRAM BOT INTEGRATION)         */}
+                    {/* ======================================================== */}
+                    <div className={`p-4 rounded-2xl border transition-all ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-3`}>
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Send className="h-4 w-4 text-blue-400" />
+                          <h4 className="font-bold text-xs text-white">
+                            {currentLang === 'fa' ? '۲. اتصال به ربات تلگرام (Telegram Bot)' : '2. Telegram Online Bot'}
+                          </h4>
+                        </div>
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
+                          ● Online 24/7
+                        </span>
+                      </div>
+
+                      {/* Telegram Bot Card */}
+                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-blue-400 font-bold text-sm">🤖</span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-9 w-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-base shrink-0">
+                              🤖
+                            </div>
                             <div>
-                              <span className="font-bold text-xs text-white block">
-                                {currentLang === 'fa' ? 'ربات تلگرام آنلاین (Telegram Bot)' : 'Telegram Online Bot'}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block">
-                                {currentLang === 'fa' ? '@aisocialfeedbot • ارسال ۲۴ ساعته هشدارها' : '@aisocialfeedbot • 24/7 Alert Dispatch'}
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-xs text-white block">
+                                  {currentLang === 'fa' ? 'ربات آنلاین ارسال هشدارها' : 'Online Telegram Alert Bot'}
+                                </span>
+                                <span className="text-[10px] font-mono text-blue-400 bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-800/50">
+                                  @aisocialfeedbot
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {currentLang === 'fa' ? 'ارسال ۲۴ ساعته اعلان هشدارها روی تلگرام با سرعت بالا' : 'Instant 24/7 alert dispatch directly to your Telegram'}
                               </span>
                             </div>
                           </div>
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
-                            ● Online
-                          </span>
                         </div>
 
-                        <div className="space-y-1.5 pt-1">
-                          <label className="block text-[10px] text-slate-400">
+                        {/* Guide Steps */}
+                        <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10.5px] text-blue-200 leading-relaxed space-y-1">
+                          <div className="flex items-start gap-1.5">
+                            <span className="text-blue-400 font-bold">۱.</span>
+                            <span>{currentLang === 'fa' ? 'در تلگرام به ربات @aisocialfeedbot پیام داده و دکمه /start را بزنید.' : 'Message @aisocialfeedbot on Telegram and send /start.'}</span>
+                          </div>
+                          <div className="flex items-start gap-1.5">
+                            <span className="text-blue-400 font-bold">۲.</span>
+                            <span>{currentLang === 'fa' ? 'شناسه عددی (Chat ID) یا یوزرنام تلگرام خود را وارد و دکمه تست را بزنید.' : 'Enter your Chat ID or Username below and test dispatch.'}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-0.5">
+                          <label className="block text-[10px] text-slate-400 font-medium">
                             {currentLang === 'fa' ? 'چت آیدی یا یوزرنام تلگرام (Telegram Chat ID):' : 'Telegram Chat ID or Username:'}
                           </label>
                           <div className="flex items-center gap-2">
@@ -2198,14 +2238,14 @@ export default function App() {
                               value={telegramChatId}
                               onChange={(e) => setTelegramChatId(e.target.value)}
                               placeholder="@MyTelegramUser or 123456789"
-                              className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+                              className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
                             />
                             <button
                               onClick={handleTestTelegramMessage}
                               disabled={isTestingTelegram}
-                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                              className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"
                             >
-                              <Zap className={`h-3 w-3 ${isTestingTelegram ? 'animate-spin' : ''}`} />
+                              <Zap className={`h-3.5 w-3.5 ${isTestingTelegram ? 'animate-spin' : ''}`} />
                               <span>{isTestingTelegram ? '...' : (currentLang === 'fa' ? 'تست تلگرام' : 'Test Dispatch')}</span>
                             </button>
                           </div>
@@ -2214,14 +2254,14 @@ export default function App() {
                     </div>
 
                     {/* ======================================================== */}
-                    {/* SECTION 2: GLOBAL TIMER & ALARM SOUND RINGTONE           */}
+                    {/* SECTION 3: بخش تنظیمات الارمها (ALARM SETTINGS & SOUND)   */}
                     {/* ======================================================== */}
                     <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-3.5`}>
                       <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-amber-400" />
                           <h4 className="font-bold text-xs text-white">
-                            {currentLang === 'fa' ? '۲. تایمر سراسری و صدای زنگ آلارم' : '2. Global Timer & Alarm Ringtone'}
+                            {currentLang === 'fa' ? '۳. تنظیمات هشدارها و صدای زنگ (Alarm Settings)' : '3. Alarm Schedule & Sound Settings'}
                           </h4>
                         </div>
                       </div>
@@ -2238,7 +2278,7 @@ export default function App() {
                                 {currentLang === 'fa' ? '⚡ تایمر سراسری (Global Timer)' : '⚡ Global Timer Override'}
                               </span>
                               <span className="text-[10px] text-slate-400 block">
-                                {currentLang === 'fa' ? 'پایش هم‌زمان تمام آلارم‌ها با یک تایمر واحد' : 'Evaluate all alarms simultaneously on a single schedule'}
+                                {currentLang === 'fa' ? 'پایش هم‌زمان تمام آلارم‌ها با یک زمان‌بندی مشترک' : 'Evaluate all alarms simultaneously on a single schedule'}
                               </span>
                             </div>
                           </div>
@@ -2432,12 +2472,12 @@ export default function App() {
                     </div>
 
                     {/* ======================================================== */}
-                    {/* SECTION 3: THEMES (Compact Button Heights)                */}
+                    {/* SECTION 4: بخش تمها (THEMES & APPEARANCE)                 */}
                     {/* ======================================================== */}
                     <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2.5`}>
                       <div className="flex items-center gap-2 font-bold text-xs text-white">
                         <Palette className={`h-4 w-4 ${accentClass}`} />
-                        <span>۳. {currentLang === 'fa' ? 'پوسته و تم رنگی (۱۰ حالت)' : '3. UI Themes (10 Presets)'}</span>
+                        <span>۴. {currentLang === 'fa' ? 'پوسته و تم رنگی (۱۰ حالت)' : '4. UI Themes (10 Presets)'}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
@@ -2469,12 +2509,12 @@ export default function App() {
                     </div>
 
                     {/* ======================================================== */}
-                    {/* SECTION 4: BACKUP & RESTORE                              */}
+                    {/* SECTION 5: بخش BACKUP & RESTORE                          */}
                     {/* ======================================================== */}
                     <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
                       <div className="font-bold text-xs flex items-center gap-2 text-white">
                         <Database className="h-4 w-4 text-emerald-400" />
-                        <span>۴. {currentLang === 'fa' ? 'پشتیبان‌گیری و بازیابی (Backup & Restore)' : '4. Backup & Restore'}</span>
+                        <span>۵. {currentLang === 'fa' ? 'پشتیبان‌گیری و بازیابی (Backup & Restore)' : '5. Backup & Restore'}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <button
@@ -2495,13 +2535,13 @@ export default function App() {
                     </div>
 
                     {/* ======================================================== */}
-                    {/* SECTION 5: LANGUAGE                                      */}
+                    {/* SECTION 6: بخش زبان (LANGUAGE)                           */}
                     {/* ======================================================== */}
                     <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
                       <div className="font-bold text-xs flex items-center justify-between text-white">
                         <div className="flex items-center gap-2">
                           <Languages className="h-4 w-4 text-emerald-400" />
-                          <span>۵. {currentLang === 'fa' ? 'زبان برنامه (Language)' : '5. Language'}</span>
+                          <span>۶. {currentLang === 'fa' ? 'زبان برنامه (Language)' : '6. Language'}</span>
                         </div>
                         <button
                           onClick={() => setShowLanguageModal(true)}
@@ -2520,20 +2560,22 @@ export default function App() {
                     </div>
 
                     {/* ======================================================== */}
-                    {/* SECTION 6: 24/7 BACKGROUND SYNC & WIDGETS                */}
+                    {/* SECTION 7: بخش تنظیمات باتری و پس‌زمینه (BATTERY & BG)    */}
                     {/* ======================================================== */}
-                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2`}>
+                    <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2.5`}>
                       <div className="font-bold text-xs flex items-center justify-between text-white">
                         <div className="flex items-center gap-2">
-                          <LayoutGrid className="h-4 w-4 text-violet-400" />
-                          <span>۶. {currentLang === 'fa' ? 'پایش پس‌زمینه ۲۴/۷ و ویجت' : '6. 24/7 Background Sync & Widgets'}</span>
+                          <BatteryCharging className="h-4 w-4 text-emerald-400" />
+                          <span>۷. {currentLang === 'fa' ? 'تنظیمات باتری و کارکرد پس‌زمینه' : '7. Battery & Background Sync'}</span>
                         </div>
-                        <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold">
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold">
                           ● Active 24/7
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 leading-relaxed">
-                        {currentLang === 'fa' ? 'پایش قیمت‌ها توسط موتور سرور به صورت آنلاین در ۲۴ ساعت شبانه‌روز انجام می‌شود.' : 'Server engine continuously checks active rules 24/7 online.'}
+                        {currentLang === 'fa' 
+                          ? 'پایش مداوم نرخ‌ها توسط موتور ابری در ۲۴ ساعت شبانه‌روز انجام می‌شود. برای کارکرد دقیق بدون تاخیر در گوشی‌های اندروید (شیائومی، سامسونگ، هواوی)، بهینه‌سازی باتری (Battery Saver) را برای برنامه غیرفعال کنید و ویژگی شروع خودکار (Auto-start) را فعال نمایید.' 
+                          : 'Server engine monitors prices 24/7. To ensure real-time alerts without delay on Android devices (Xiaomi, Samsung, Huawei), disable Battery Saver restrictions and enable Auto-start.'}
                       </p>
                       <button
                         onClick={() => setShowHomeWidgetModal(true)}
@@ -2545,7 +2587,7 @@ export default function App() {
                     </div>
 
                     {/* ======================================================== */}
-                    {/* SECTION 7: DEBUG & ADMIN PANEL (RESTRICTED TO MEHRAN)    */}
+                    {/* SECTION 8: بخش پنل ادمین و عیب‌یابی (ADMIN & DEBUG)        */}
                     {/* ======================================================== */}
                     {(googleUser?.email?.toLowerCase() === 'mehran.aminpoor@gmail.com' || (!googleUser && true)) && (
                       <div className="p-4 rounded-2xl border border-rose-500/40 bg-rose-950/10 space-y-3">
@@ -2553,7 +2595,7 @@ export default function App() {
                           <div className="flex items-center gap-2">
                             <Shield className="h-4 w-4 text-rose-400" />
                             <h4 className="font-bold text-xs text-rose-300">
-                              ۷. {currentLang === 'fa' ? 'پنل ادمین و عیب‌یابی (Debug Panel)' : '7. Admin & Debug Panel'}
+                              ۸. {currentLang === 'fa' ? 'پنل ادمین و مرکز عیب‌یابی (Admin & Diagnostics)' : '8. Admin & Diagnostics Panel'}
                             </h4>
                           </div>
                           <span className="text-[9px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono font-bold">

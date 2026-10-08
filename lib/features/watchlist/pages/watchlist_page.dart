@@ -803,201 +803,191 @@ class _WatchlistPageState extends State<WatchlistPage> {
                           ],
                         ),
 
-                        // === ROW 2: TradingView Split - Price on Left & Target Capsule on Right ===
+                        // === ROW 2: Price Metrics Bar (Live Price & 24h Change Badge) ===
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            // Left Section: Live Price & 24h Change Pill
-                            Expanded(
-                              flex: 55,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    height: 13,
-                                    child: showPrevious
-                                        ? FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: cardLang),
-                                              maxLines: 1,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                fontFamily: 'monospace',
-                                                decoration: TextDecoration.lineThrough,
-                                                color: textMuted,
-                                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 12,
+                                  child: showPrevious
+                                      ? FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: cardLang),
+                                            maxLines: 1,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: 'monospace',
+                                              decoration: TextDecoration.lineThrough,
+                                              color: textMuted,
                                             ),
-                                          )
-                                        : const SizedBox.shrink(),
-                                  ),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      displayPrice != null
-                                          ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: cardLang)
-                                          : '---',
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                        fontSize: 18.5,
-                                        fontWeight: FontWeight.w900,
-                                        fontFamily: 'monospace',
-                                        letterSpacing: -0.2,
-                                        color: rule.isActive
-                                            ? (changePercent != null && changePercent > 0.005
-                                                ? theme.colorScheme.primary
-                                                : (changePercent != null && changePercent < -0.005
-                                                    ? AppTokens.negative
-                                                    : theme.colorScheme.onSurface))
-                                            : textMuted,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  if (isTriggeredOneShot)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: AppTokens.warning.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(5),
-                                        border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
-                                      ),
-                                      child: const Text(
-                                        '✅ Done',
-                                        maxLines: 1,
-                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTokens.warning),
-                                      ),
-                                    )
-                                  else if (changePercent != null)
-                                    Builder(builder: (context) {
-                                      final cp = changePercent!;
-                                      final isZero = cp.abs() < 0.005;
-                                      final isPositive = cp > 0.005;
-                                      final badgeColor = isZero ? textMuted : (isPositive ? AppTokens.positive : AppTokens.negative);
-                                      final badgeBg = isZero
-                                          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
-                                          : badgeColor.withValues(alpha: 0.12);
-                                      final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
-
-                                      return Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: badgeBg,
-                                          borderRadius: BorderRadius.circular(5),
-                                        ),
-                                        child: Text(
-                                          '$prefix${cp.abs().toStringAsFixed(2)}%',
-                                          maxLines: 1,
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            fontFamily: 'monospace',
-                                            color: badgeColor,
                                           ),
-                                        ),
-                                      );
-                                    })
-                                  else
-                                    const SizedBox(height: 15),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            // Right Section: Target Capsule Card
-                            Expanded(
-                              flex: 45,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: isTriggeredOneShot
-                                      ? AppTokens.warning.withValues(alpha: 0.10)
-                                      : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isTriggeredOneShot
-                                        ? AppTokens.warning.withValues(alpha: 0.3)
-                                        : (progState.color != null && progState.percentageInt >= 85
-                                            ? progState.color!.withValues(alpha: 0.4)
-                                            : theme.colorScheme.primary.withValues(alpha: 0.15)),
-                                    width: 1,
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    displayPrice != null
+                                        ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: cardLang)
+                                        : '---',
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: 'monospace',
+                                      letterSpacing: -0.2,
+                                      color: rule.isActive
+                                          ? (changePercent != null && changePercent > 0.005
+                                              ? theme.colorScheme.primary
+                                              : (changePercent != null && changePercent < -0.005
+                                                  ? AppTokens.negative
+                                                  : theme.colorScheme.onSurface))
+                                          : textMuted,
+                                    ),
                                   ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          rule.conditionType == AlertConditionType.priceThreshold
-                                              ? Icons.gps_fixed_rounded
-                                              : Icons.trending_up_rounded,
-                                          size: 11,
-                                          color: isTriggeredOneShot
-                                              ? AppTokens.warning
-                                              : (progState.color ?? theme.colorScheme.primary),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            _buildConditionSummary(rule, cardLang),
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                              ],
+                            ),
+                            if (isTriggeredOneShot)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTokens.warning.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
+                                ),
+                                child: const Text(
+                                  '✅ Done',
+                                  maxLines: 1,
+                                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppTokens.warning),
+                                ),
+                              )
+                            else if (changePercent != null)
+                              Builder(builder: (context) {
+                                final cp = changePercent!;
+                                final isZero = cp.abs() < 0.005;
+                                final isPositive = cp > 0.005;
+                                final badgeColor = isZero ? textMuted : (isPositive ? AppTokens.positive : AppTokens.negative);
+                                final badgeBg = isZero
+                                    ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
+                                    : badgeColor.withValues(alpha: 0.12);
+                                final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
+
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: badgeBg,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '$prefix${cp.abs().toStringAsFixed(2)}%',
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'monospace',
+                                      color: badgeColor,
                                     ),
-                                    const SizedBox(height: 5),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(3),
-                                      child: Stack(
-                                        children: [
-                                          Container(
-                                            height: 3,
-                                            width: double.infinity,
-                                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
-                                          ),
-                                          if (progState.color != null && progState.progressFactor > 0)
-                                            FractionallySizedBox(
-                                              widthFactor: progState.progressFactor,
-                                              child: Container(
-                                                height: 3,
-                                                color: isTriggeredOneShot ? AppTokens.warning : progState.color,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      isTriggeredOneShot ? 'Triggered (Done)' : '${progState.percentageInt}% to target',
+                                  ),
+                                );
+                              })
+                            else
+                              const SizedBox(height: 16),
+                          ],
+                        ),
+
+                        // === ROW 3: Target Proximity Progress Strip ===
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isTriggeredOneShot
+                                ? AppTokens.warning.withValues(alpha: 0.08)
+                                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isTriggeredOneShot
+                                  ? AppTokens.warning.withValues(alpha: 0.25)
+                                  : (progState.color != null && progState.percentageInt >= 85
+                                      ? progState.color!.withValues(alpha: 0.35)
+                                      : theme.colorScheme.primary.withValues(alpha: 0.12)),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    rule.conditionType == AlertConditionType.priceThreshold
+                                        ? Icons.gps_fixed_rounded
+                                        : Icons.trending_up_rounded,
+                                    size: 11.5,
+                                    color: isTriggeredOneShot
+                                        ? AppTokens.warning
+                                        : (progState.color ?? theme.colorScheme.primary),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _buildConditionSummary(rule, cardLang),
                                       style: TextStyle(
-                                        fontSize: 8.5,
+                                        fontSize: 9.5,
                                         fontWeight: FontWeight.bold,
-                                        fontFamily: 'monospace',
-                                        color: isTriggeredOneShot ? AppTokens.warning : (progState.color ?? textMuted),
+                                        color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isTriggeredOneShot ? 'Done' : '${progState.percentageInt}%',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'monospace',
+                                      color: isTriggeredOneShot ? AppTokens.warning : (progState.color ?? textMuted),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      height: 3,
+                                      width: double.infinity,
+                                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+                                    ),
+                                    if (progState.color != null && progState.progressFactor > 0)
+                                      FractionallySizedBox(
+                                        widthFactor: progState.progressFactor,
+                                        child: Container(
+                                          height: 3,
+                                          color: isTriggeredOneShot ? AppTokens.warning : progState.color,
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
-                        // === ROW 3: Footer Utilities & Check Action ===
+                        // === ROW 4: Footer Utilities & Check Action ===
                         Row(
                           children: [
                             Container(

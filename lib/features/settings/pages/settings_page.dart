@@ -532,57 +532,14 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space20),
         children: [
-          // Section 0: User Profile & VIP Google Sign-In (Premium Promotion)
+          // Section 1: User Profile & VIP Google Sign-In (بخش لاگین)
           _buildUserAccountCard(context, settingsService, settings, theme, lang, isFa),
 
-          // Section 0.5: Telegram Bot VIP Alerts
+          // Section 2: Telegram Bot VIP Alerts (بخش تلگرام)
           _buildTelegramIntegrationCard(context, settingsService, settings, theme, lang, isFa),
 
-          // Section 1: Languages (10 Languages)
-          _buildSectionHeader(AppStrings.get('select_language', lang), theme),
-          const SizedBox(height: AppTokens.space8),
-
-          InkWell(
-            onTap: () => _showLanguagePicker(context, settingsService, lang),
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: theme.dividerColor),
-              ),
-              child: Row(
-                children: [
-                  Text(currentLangObj['flag']!, style: const TextStyle(fontSize: 22)),
-                  const SizedBox(width: AppTokens.space12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        currentLangObj['native']!,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface),
-                      ),
-                      Text(
-                        '${currentLangObj['name']} (10 Languages)',
-                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_drop_down_rounded,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    size: 28,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: AppTokens.space20),
-
-          // Section 2: Sound, Ringtone & Vibration
-          _buildSectionHeader(isFa ? 'تنظیمات صدای آلارم و زنگ هشدار' : 'Alarm Sound & Ringtone', theme),
+          // Section 3: Alarm Sound, Ringtone & Vibration (بخش تنظیمات آلارم‌ها)
+          _buildSectionHeader(isFa ? '۳. تنظیمات صدای آلارم و زنگ هشدار' : '3. Alarm Sound & Ringtone', theme),
           const SizedBox(height: AppTokens.space8),
 
           Container(
@@ -857,14 +814,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 2.5: 24/7 Background Alert Delivery Guide (Xiaomi, Samsung & Android Setup)
-          _buildSectionHeader(isFa ? 'پایش ۲۴/۷ و تنظیمات پس‌زمینه گوشی' : '24/7 Background Alert Reliability', theme),
-          const SizedBox(height: AppTokens.space8),
-          _buildBackgroundReliabilityCard(context, theme, lang, isFa),
-          const SizedBox(height: AppTokens.space20),
-
-          // Section 3: Themes & Colors (Theme & Color Schema)
-          _buildSectionHeader(AppStrings.get('theme_and_colors', lang), theme),
+          // Section 4: Themes & Colors (بخش تم‌ها)
+          _buildSectionHeader(isFa ? '۴. ${AppStrings.get('theme_and_colors', lang)}' : '4. ${AppStrings.get('theme_and_colors', lang)}', theme),
           const SizedBox(height: AppTokens.space8),
 
           Container(
@@ -972,8 +923,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 4: Backup & Restore
-          _buildSectionHeader(AppStrings.get('backup_and_restore', lang), theme),
+          // Section 5: Backup & Restore (بخش پشتیبان‌گیری و بازیابی)
+          _buildSectionHeader(isFa ? '۵. ${AppStrings.get('backup_and_restore', lang)}' : '5. ${AppStrings.get('backup_and_restore', lang)}', theme),
           const SizedBox(height: AppTokens.space8),
 
           _buildActionTile(
@@ -1006,8 +957,57 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 5: Deep Debug & Diagnostics Center
-          _buildSectionHeader(isFa ? 'مرکز عیب‌یابی و دیباگ هوشمند' : 'Debug & Diagnostics Center', theme),
+          // Section 6: Languages (بخش زبان)
+          _buildSectionHeader(isFa ? '۶. ${AppStrings.get('select_language', lang)}' : '6. ${AppStrings.get('select_language', lang)}', theme),
+          const SizedBox(height: AppTokens.space8),
+
+          InkWell(
+            onTap: () => _showLanguagePicker(context, settingsService, lang),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: theme.dividerColor),
+              ),
+              child: Row(
+                children: [
+                  Text(currentLangObj['flag']!, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: AppTokens.space12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        currentLangObj['native']!,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface),
+                      ),
+                      Text(
+                        '${currentLangObj['name']} (10 Languages)',
+                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    size: 28,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppTokens.space20),
+
+          // Section 7: 24/7 Background Alert Delivery Guide & Battery (بخش تنظیمات باتری و پس‌زمینه)
+          _buildSectionHeader(isFa ? '۷. پایش ۲۴/۷ و تنظیمات پس‌زمینه و باتری' : '7. 24/7 Background Sync & Battery', theme),
+          const SizedBox(height: AppTokens.space8),
+          _buildBackgroundReliabilityCard(context, theme, lang, isFa),
+          const SizedBox(height: AppTokens.space20),
+
+          // Section 8: Deep Debug & Diagnostics Center (بخش پنل ادمین و عیب‌یابی)
+          _buildSectionHeader(isFa ? '۸. مرکز عیب‌یابی و دیباگ هوشمند' : '8. Debug & Diagnostics Center', theme),
           const SizedBox(height: AppTokens.space8),
 
           _buildActionTile(
