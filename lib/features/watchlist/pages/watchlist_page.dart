@@ -660,434 +660,437 @@ class _WatchlistPageState extends State<WatchlistPage> {
         child: InkWell(
           onTap: () => _openEditFlow(rule),
           borderRadius: BorderRadius.circular(18),
-          child: SizedBox(
-            height: 184,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.surface,
-                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: isTriggeredOneShot
-                      ? AppTokens.warning.withValues(alpha: 0.75)
-                      : (rule.isActive
-                          ? theme.colorScheme.primary.withValues(alpha: 0.25)
-                          : theme.dividerColor),
-                  width: isTriggeredOneShot ? 1.5 : 1.1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: SizedBox(
+              height: 184,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.colorScheme.surface,
+                      theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              child: Builder(
-                builder: (context) {
-                  final prevPrice = rule.previousPrice ?? basePrice;
-                  final showPrevious = prevPrice != null &&
-                      displayPrice != null &&
-                      (prevPrice - displayPrice).abs() > 1e-8;
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isTriggeredOneShot
+                        ? AppTokens.warning.withValues(alpha: 0.75)
+                        : (rule.isActive
+                            ? theme.colorScheme.primary.withValues(alpha: 0.25)
+                            : theme.dividerColor),
+                    width: isTriggeredOneShot ? 1.5 : 1.1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Builder(
+                  builder: (context) {
+                    const cardLang = 'en';
+                    final prevPrice = rule.previousPrice ?? basePrice;
+                    final showPrevious = prevPrice != null &&
+                        displayPrice != null &&
+                        (prevPrice - displayPrice).abs() > 1e-8;
 
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // === ROW 1: Hero Asset + Dedicated Wide Title & Exchange + Switch ===
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                                width: 1.2,
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // === ROW 1: Hero Asset + Dedicated Wide Title & Exchange + Switch ===
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: CryptoIcons.buildLogo(rule.baseCurrency, size: 32),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          rule.pair.displayName,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 14,
+                                            color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.edit_note_rounded, size: 14, color: theme.colorScheme.primary),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          _getExchangeDisplayName(rule.exchangeId, cardLang).toUpperCase(),
+                                          maxLines: 1,
+                                          softWrap: false,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Flexible(
+                                        child: Text(
+                                          rule.marketSymbol.isNotEmpty ? rule.marketSymbol : rule.baseCurrency,
+                                          style: TextStyle(
+                                            fontSize: 9.5,
+                                            fontFamily: 'monospace',
+                                            fontWeight: FontWeight.w600,
+                                            color: textMuted,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            child: CryptoIcons.buildLogo(rule.baseCurrency, size: 34),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        rule.pair.displayName,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14.5,
-                                          color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                            const SizedBox(width: 6),
+                            Transform.scale(
+                              scale: 0.78,
+                              child: isTriggeredOneShot
+                                  ? IconButton(
+                                      icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
+                                      onPressed: () => repository.rearmRule(rule.uuid),
+                                    )
+                                  : Switch(
+                                      value: rule.isActive,
+                                      activeThumbColor: Colors.white,
+                                      activeTrackColor: theme.colorScheme.primary,
+                                      onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
                                     ),
-                                    if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
-                                      const SizedBox(width: 4),
-                                      Icon(Icons.edit_note_rounded, size: 15, color: theme.colorScheme.primary),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      child: Text(
-                                        _getExchangeDisplayName(rule.exchangeId, lang).toUpperCase(),
-                                        maxLines: 1,
-                                        softWrap: false,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: rule.isActive ? theme.colorScheme.primary : textMuted,
-                                          letterSpacing: 0.4,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Flexible(
-                                      child: Text(
-                                        rule.marketSymbol.isNotEmpty ? rule.marketSymbol : rule.baseCurrency,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontFamily: 'monospace',
-                                          fontWeight: FontWeight.w600,
-                                          color: textMuted,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Transform.scale(
-                            scale: 0.8,
-                            child: isTriggeredOneShot
-                                ? IconButton(
-                                    icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
-                                    onPressed: () => repository.rearmRule(rule.uuid),
-                                  )
-                                : Switch(
-                                    value: rule.isActive,
-                                    activeThumbColor: Colors.white,
-                                    activeTrackColor: theme.colorScheme.primary,
-                                    onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
-                                  ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
 
-                      // === ROW 2: Financial Metrics & Live Price Bar ===
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  height: 13,
-                                  child: showPrevious
-                                      ? FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: lang),
-                                            maxLines: 1,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              fontFamily: 'monospace',
-                                              decoration: TextDecoration.lineThrough,
-                                              color: textMuted,
+                        // === ROW 2: TradingView Split - Price on Left & Target Capsule on Right ===
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Left Section: Live Price & 24h Change Pill
+                            Expanded(
+                              flex: 55,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    height: 13,
+                                    child: showPrevious
+                                        ? FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: cardLang),
+                                              maxLines: 1,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'monospace',
+                                                decoration: TextDecoration.lineThrough,
+                                                color: textMuted,
+                                              ),
                                             ),
-                                          ),
-                                        )
-                                      : const SizedBox.shrink(),
-                                ),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    displayPrice != null ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: lang) : '---',
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w900,
-                                      fontFamily: 'monospace',
-                                      letterSpacing: -0.2,
-                                      color: rule.isActive
-                                          ? (changePercent != null && changePercent > 0.005
-                                              ? theme.colorScheme.primary
-                                              : (changePercent != null && changePercent < -0.005
-                                                  ? AppTokens.negative
-                                                  : theme.colorScheme.onSurface))
-                                          : textMuted,
-                                    ),
+                                          )
+                                        : const SizedBox.shrink(),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isTriggeredOneShot)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                  decoration: BoxDecoration(
-                                    color: AppTokens.warning.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
-                                  ),
-                                  child: const Text(
-                                    '✅ Done',
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTokens.warning,
-                                    ),
-                                  ),
-                                )
-                              else if (changePercent != null)
-                                Builder(builder: (context) {
-                                  final cp = changePercent!;
-                                  final isZero = cp.abs() < 0.005;
-                                  final isPositive = cp > 0.005;
-                                  final badgeColor = isZero
-                                      ? textMuted
-                                      : (isPositive ? AppTokens.positive : AppTokens.negative);
-                                  final badgeBg = isZero
-                                      ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
-                                      : badgeColor.withValues(alpha: 0.12);
-                                  final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
-
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: badgeBg,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
                                     child: Text(
-                                      '$prefix${cp.abs().toStringAsFixed(2)}%',
+                                      displayPrice != null
+                                          ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: cardLang)
+                                          : '---',
                                       maxLines: 1,
                                       style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18.5,
+                                        fontWeight: FontWeight.w900,
                                         fontFamily: 'monospace',
-                                        color: badgeColor,
+                                        letterSpacing: -0.2,
+                                        color: rule.isActive
+                                            ? (changePercent != null && changePercent > 0.005
+                                                ? theme.colorScheme.primary
+                                                : (changePercent != null && changePercent < -0.005
+                                                    ? AppTokens.negative
+                                                    : theme.colorScheme.onSurface))
+                                            : textMuted,
                                       ),
                                     ),
-                                  );
-                                })
-                              else
-                                const SizedBox.shrink(),
-                            ],
-                          ),
-                        ],
-                      ),
-
-                      // === ROW 3: Target Proximity Progress Gauge ===
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      rule.conditionType == AlertConditionType.priceThreshold
-                                          ? Icons.gps_fixed_rounded
-                                          : Icons.trending_up_rounded,
-                                      size: 12,
-                                      color: progState.color ?? theme.colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        _buildConditionSummary(rule, lang),
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.9) : textMuted,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${progState.percentageInt}% ${lang == 'fa' ? 'تا هدف' : 'to target'}',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'monospace',
-                                  color: progState.color ?? textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  height: 3.5,
-                                  width: double.infinity,
-                                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
-                                ),
-                                if (progState.color != null && progState.progressFactor > 0)
-                                  FractionallySizedBox(
-                                    widthFactor: progState.progressFactor,
-                                    child: Container(
-                                      height: 3.5,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  if (isTriggeredOneShot)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                       decoration: BoxDecoration(
-                                        color: progState.color,
-                                        borderRadius: BorderRadius.circular(4),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: progState.color!.withValues(alpha: 0.4),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 1),
+                                        color: AppTokens.warning.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(5),
+                                        border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
+                                      ),
+                                      child: const Text(
+                                        '✅ Done',
+                                        maxLines: 1,
+                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTokens.warning),
+                                      ),
+                                    )
+                                  else if (changePercent != null)
+                                    Builder(builder: (context) {
+                                      final cp = changePercent!;
+                                      final isZero = cp.abs() < 0.005;
+                                      final isPositive = cp > 0.005;
+                                      final badgeColor = isZero ? textMuted : (isPositive ? AppTokens.positive : AppTokens.negative);
+                                      final badgeBg = isZero
+                                          ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6)
+                                          : badgeColor.withValues(alpha: 0.12);
+                                      final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
+
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: badgeBg,
+                                          borderRadius: BorderRadius.circular(5),
+                                        ),
+                                        child: Text(
+                                          '$prefix${cp.abs().toStringAsFixed(2)}%',
+                                          maxLines: 1,
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'monospace',
+                                            color: badgeColor,
                                           ),
+                                        ),
+                                      );
+                                    })
+                                  else
+                                    const SizedBox(height: 15),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // Right Section: Target Capsule Card
+                            Expanded(
+                              flex: 45,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: isTriggeredOneShot
+                                      ? AppTokens.warning.withValues(alpha: 0.10)
+                                      : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isTriggeredOneShot
+                                        ? AppTokens.warning.withValues(alpha: 0.3)
+                                        : (progState.color != null && progState.percentageInt >= 85
+                                            ? progState.color!.withValues(alpha: 0.4)
+                                            : theme.colorScheme.primary.withValues(alpha: 0.15)),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          rule.conditionType == AlertConditionType.priceThreshold
+                                              ? Icons.gps_fixed_rounded
+                                              : Icons.trending_up_rounded,
+                                          size: 11,
+                                          color: isTriggeredOneShot
+                                              ? AppTokens.warning
+                                              : (progState.color ?? theme.colorScheme.primary),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _buildConditionSummary(rule, cardLang),
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 5),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(3),
+                                      child: Stack(
+                                        children: [
+                                          Container(
+                                            height: 3,
+                                            width: double.infinity,
+                                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+                                          ),
+                                          if (progState.color != null && progState.progressFactor > 0)
+                                            FractionallySizedBox(
+                                              widthFactor: progState.progressFactor,
+                                              child: Container(
+                                                height: 3,
+                                                color: isTriggeredOneShot ? AppTokens.warning : progState.color,
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                              ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      isTriggeredOneShot ? 'Triggered (Done)' : '${progState.percentageInt}% to target',
+                                      style: TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'monospace',
+                                        color: isTriggeredOneShot ? AppTokens.warning : (progState.color ?? textMuted),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
 
-                      // === ROW 4: Time Interval + Sound/TTS Badges + Manual Sync Button ===
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.timer_outlined, size: 10.5, color: theme.colorScheme.primary),
-                                const SizedBox(width: 3.5),
-                                Text(
-                                  _formatInterval(rule.checkIntervalSeconds, lang),
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          if (rule.ttsEnabled)
-                            Icon(Icons.record_voice_over_rounded, size: 12, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
-                          if (rule.soundEnabled)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 3),
-                              child: Icon(Icons.volume_up_rounded, size: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                            ),
-                          const Spacer(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.hourglass_bottom_rounded,
-                                size: 10.5,
-                                color: rule.isActive ? theme.colorScheme.primary : textMuted,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                _formatNextCheckTime(rule, lang),
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.7) : textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
-                            borderRadius: BorderRadius.circular(5),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        // === ROW 3: Footer Utilities & Check Action ===
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(5),
-                                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (isChecking)
-                                    SizedBox(
-                                      width: 9,
-                                      height: 9,
-                                      child: CircularProgressIndicator(strokeWidth: 1.5, color: theme.colorScheme.primary),
-                                    )
-                                  else
-                                    Icon(Icons.sync_rounded, size: 11, color: theme.colorScheme.primary),
-                                  const SizedBox(width: 2.5),
+                                  Icon(Icons.timer_outlined, size: 10, color: theme.colorScheme.primary),
+                                  const SizedBox(width: 3),
                                   Text(
-                                    AppStrings.get('check_now', lang),
+                                    _formatInterval(rule.checkIntervalSeconds, cardLang),
                                     style: TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
                                       color: theme.colorScheme.primary,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  );
-                },
+                            const SizedBox(width: 5),
+                            if (rule.ttsEnabled)
+                              Icon(Icons.record_voice_over_rounded, size: 11.5, color: theme.colorScheme.primary.withValues(alpha: 0.75)),
+                            if (rule.soundEnabled)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 3),
+                                child: Icon(Icons.volume_up_rounded, size: 11.5, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                              ),
+                            const Spacer(),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.hourglass_bottom_rounded,
+                                  size: 10,
+                                  color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                                ),
+                                const SizedBox(width: 2.5),
+                                Text(
+                                  _formatNextCheckTime(rule, cardLang),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w500,
+                                    color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.7) : textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
+                              borderRadius: BorderRadius.circular(5),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.28)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isChecking)
+                                      SizedBox(
+                                        width: 9,
+                                        height: 9,
+                                        child: CircularProgressIndicator(strokeWidth: 1.5, color: theme.colorScheme.primary),
+                                      )
+                                    else
+                                      Icon(Icons.sync_rounded, size: 10.5, color: theme.colorScheme.primary),
+                                    const SizedBox(width: 2.5),
+                                    Text(
+                                      AppStrings.get('check_now', cardLang),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),

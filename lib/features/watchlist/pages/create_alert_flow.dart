@@ -313,13 +313,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   }
 
   String _formatSmartPrice(double price, String quoteCurrency) {
-    // 1. Check for scaled currency abbreviation (e.g. quoteCurrency == 'Billion USD', 'B USD', 'M USD')
-    if (quoteCurrency == 'Billion USD' || quoteCurrency == 'B USD') {
-      return FormatUtils.formatScaledCurrencyPrice(price, 'B USD') ?? '\$${_formatSmartNumber(price)}B';
-    }
+    // 1. Check for scaled currency abbreviation (e.g. quoteCurrency == 'Billion USD', 'B USD', 'M USD', 'TOTAL')
     final scaled = FormatUtils.formatScaledCurrencyPrice(price, quoteCurrency);
     if (scaled != null) {
       return scaled;
+    }
+    if (quoteCurrency == 'Billion USD' || quoteCurrency == 'B USD') {
+      return FormatUtils.formatScaledCurrencyPrice(price, 'B USD') ?? '\$${_formatInputNumber(price, 'B USD')}B';
     }
 
     final lang = context.read<SettingsService>().settings.language;
@@ -328,7 +328,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     if (_flowType == MarketFlowType.iran || isToman) {
       return FormatUtils.formatIranPrice(price, unit: quoteCurrency, lang: lang);
     }
-    final numStr = _formatSmartNumber(price);
+    final numStr = _formatInputNumber(price, quoteCurrency);
     final isRials = upper == 'IRR' || upper == 'RLS' || quoteCurrency == 'ریال';
     if (isRials) {
       final faNum = lang == 'fa' ? FormatUtils.toPersianDigits(FormatUtils.formatPrice(price, showSymbol: false, lang: lang)) : FormatUtils.formatPrice(price, showSymbol: false, lang: lang);
@@ -340,7 +340,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       return '£$numStr';
     } else if (quoteCurrency == 'BTC') {
       return '₿${price.toStringAsFixed(8)}';
-    } else if (quoteCurrency == '%') {
+    } else if (quoteCurrency == '%' || upper == 'BTC.D' || upper == 'USDT.D' || upper == 'ETH.D') {
       return '${price.toStringAsFixed(2)}%';
     } else if (quoteCurrency == 'pts') {
       return '$numStr pts';
@@ -361,21 +361,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
   String _formatInputNumber(double price, [String? quoteCurrency]) {
     final quote = quoteCurrency ??
+        (_selectedMacroAsset != null ? (_selectedMacroAsset!['unit'] as String?) : null) ??
         _selectedPair?.counterCurrency ??
-        (_flowType == MarketFlowType.iran ? 'TMN' : (_selectedExchange?.defaultCounterCurrency ?? 'USD'));
+        (_flowType == MarketFlowType.iran ? (_selectedIranDomesticAsset?['unit'] as String? ?? 'TMN') : (_selectedExchange?.defaultCounterCurrency ?? 'USD'));
     return FormatUtils.formatInputNumberForUnit(price, quote);
   }
 
-  static String _formatSmartNumber(double price) {
-    if (price >= 1000) {
-      return price.toStringAsFixed(2);
-    } else if (price >= 1) {
-      return price.toStringAsFixed(4);
-    } else if (price >= 0.0001) {
-      return price.toStringAsFixed(6);
-    } else {
-      return price.toStringAsFixed(8);
-    }
+  String _formatSmartNumber(double price, [String? quoteCurrency]) {
+    return _formatInputNumber(price, quoteCurrency);
   }
 
   Future<void> _fetchLivePriceForSelectedAsset() async {

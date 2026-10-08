@@ -190,13 +190,14 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
 
   String? _resolveLogCurrency(NotificationLog log) {
     final sym = log.marketSymbol.toUpperCase();
-    if (sym == 'TOTAL' || sym == 'TOTAL2' || sym == 'TOTAL3' || sym.contains('B USD') || sym.contains('/B USD')) {
+    final baseSym = sym.contains('/') ? sym.split('/')[0].trim() : sym;
+    if (baseSym == 'TOTAL' || baseSym == 'TOTAL2' || baseSym == 'TOTAL3' || sym.contains('B USD') || sym.contains('/B USD')) {
       return 'B USD';
     }
     if (sym.contains('M USD') || sym.contains('/M USD')) {
       return 'M USD';
     }
-    if (sym == 'BTC.D' || sym == 'USDT.D' || sym == 'ETH.D' || sym.endsWith('.D') || sym.contains('%')) {
+    if (baseSym == 'BTC.D' || baseSym == 'USDT.D' || baseSym == 'ETH.D' || baseSym.endsWith('.D') || sym.contains('%')) {
       return '%';
     }
     if (sym.contains('/')) {

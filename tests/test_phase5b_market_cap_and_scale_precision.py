@@ -53,6 +53,7 @@ class TestMarketCapAndScalePrecision(unittest.TestCase):
     def test_04_notification_history_resolves_log_currency(self):
         """Verify notification history page resolves currency for TOTAL, %, etc."""
         self.assertIn("_resolveLogCurrency", self.notif_code)
+        self.assertIn("baseSym == 'TOTAL'", self.notif_code)
         self.assertIn("currencySymbol: _resolveLogCurrency(log)", self.notif_code)
 
     def test_05_web_format_scaled_price_restricts_decimals(self):
@@ -60,6 +61,7 @@ class TestMarketCapAndScalePrecision(unittest.TestCase):
         self.assertIn("maxDecimals = 3", self.web_app_code)
         self.assertIn("maxDecimals = 2", self.web_app_code)
         self.assertIn("cleanDec", self.web_app_code)
+        self.assertIn("TOTAL", self.web_app_code)
 
     def test_06_simulated_dart_formatting_logic(self):
         """Simulate the exact Dart algorithm to ensure all user acceptance criteria pass"""

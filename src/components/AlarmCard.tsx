@@ -44,7 +44,8 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   onManualCheck,
   onDelete,
 }) => {
-  const isFa = currentLang === 'fa';
+  // Always render alarm cards in LTR and English layout regardless of app language
+  const isFa = false;
   let iconUrl = '';
   let displayName = rule.marketSymbol;
   const resolveUnit = (curr: string) => {
@@ -101,7 +102,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
 
   return (
     <div
-      dir={isFa ? 'rtl' : 'ltr'}
+      dir="ltr"
       className={`w-full max-w-full overflow-hidden p-3 rounded-2xl border transition-all shadow-sm h-[208px] flex flex-col justify-between ${
         isLight
           ? 'bg-white border-slate-200/90 shadow-slate-100'
@@ -180,8 +181,18 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                   (rule.counterCurrency === '%' || unit === '%'
                     ? `${rule.basePrice.toFixed(2)}%`
                     : unit === '$'
-                    ? `$${rule.basePrice.toLocaleString()}`
-                    : `${rule.basePrice.toLocaleString()} ${unit}`)}
+                    ? `$${
+                        rule.basePrice >= 1000
+                          ? (rule.basePrice % 1 === 0 ? rule.basePrice.toLocaleString('en-US') : rule.basePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                          : rule.basePrice < 1
+                          ? rule.basePrice.toFixed(5)
+                          : rule.basePrice.toFixed(2)
+                      }`
+                    : `${
+                        rule.basePrice >= 1000
+                          ? (rule.basePrice % 1 === 0 ? rule.basePrice.toLocaleString('en-US') : rule.basePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                          : rule.basePrice.toFixed(2)
+                      } ${unit}`)}
               </span>
             ) : null}
           </div>
@@ -192,13 +203,15 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 : unit === '$'
                 ? `$${
                     displayP >= 1000
-                      ? Math.round(displayP).toLocaleString()
+                      ? (displayP % 1 === 0 ? displayP.toLocaleString('en-US') : displayP.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
                       : displayP < 1
                       ? displayP.toFixed(5)
                       : displayP.toFixed(2)
                   }`
                 : `${
-                    displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)
+                    displayP >= 1000
+                      ? (displayP % 1 === 0 ? displayP.toLocaleString('en-US') : displayP.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+                      : displayP.toFixed(2)
                   } ${unit}`)}
           </div>
         </div>

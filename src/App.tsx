@@ -145,16 +145,30 @@ export const formatScaledPrice = (price: number, unit?: string): string | null =
   const u = unit.trim().toUpperCase();
   const bMatch = /^(B|BILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$/i.exec(u);
   const mMatch = /^(M|MILLION)\s*(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)?$/i.exec(u);
+  const bSuffixMatch = /^(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)\s*(B|BILLION)$/i.exec(u);
+  const mSuffixMatch = /^(USD|EUR|GBP|BTC|JPY|CNY|USDT|USDC)\s*(M|MILLION)$/i.exec(u);
   let scale = '';
   let curr = 'USD';
   let maxDecimals = 3;
-  if (bMatch) {
+  if (u === 'TOTAL' || u === 'TOTAL2' || u === 'TOTAL3') {
+    scale = 'B';
+    curr = 'USD';
+    maxDecimals = 3;
+  } else if (bMatch) {
     scale = 'B';
     curr = bMatch[2] || 'USD';
     maxDecimals = 3;
   } else if (mMatch) {
     scale = 'M';
     curr = mMatch[2] || 'USD';
+    maxDecimals = 2;
+  } else if (bSuffixMatch) {
+    scale = 'B';
+    curr = bSuffixMatch[1] || 'USD';
+    maxDecimals = 3;
+  } else if (mSuffixMatch) {
+    scale = 'M';
+    curr = mSuffixMatch[1] || 'USD';
     maxDecimals = 2;
   }
   if (!scale) return null;

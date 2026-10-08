@@ -56,7 +56,11 @@ class FormatUtils {
 
     int maxDecimals = 3;
 
-    if (bMatch != null) {
+    if (upper == 'TOTAL' || upper == 'TOTAL2' || upper == 'TOTAL3') {
+      scaleLetter = 'B';
+      baseCurr = 'USD';
+      maxDecimals = 3;
+    } else if (bMatch != null) {
       scaleLetter = 'B';
       baseCurr = (bMatch.group(2) ?? 'USD').toUpperCase();
       maxDecimals = 3;
@@ -122,6 +126,9 @@ class FormatUtils {
           upper == 'BILLION USD' ||
           upper == 'B' ||
           upper == 'BILLION' ||
+          upper == 'TOTAL' ||
+          upper == 'TOTAL2' ||
+          upper == 'TOTAL3' ||
           upper.startsWith('B ') ||
           upper.endsWith(' B');
       if (isBillion) {
@@ -154,7 +161,7 @@ class FormatUtils {
         return price < 0 ? '-$intPart' : intPart;
       }
 
-      if (upper == '%') {
+      if (upper == '%' || upper == 'BTC.D' || upper == 'USDT.D' || upper == 'ETH.D' || upper.endsWith('.D')) {
         return price.toStringAsFixed(2);
       }
     }
@@ -184,16 +191,24 @@ class FormatUtils {
   }) {
     if (price.isNaN || price.isInfinite) return '0.00';
 
-    // 1. Check for scaled currency abbreviation (e.g. 'B USD', 'M USD', 'Billion USD')
-    if (showSymbol && currencySymbol != null && currencySymbol.isNotEmpty) {
-      final scaled = formatScaledCurrencyPrice(price, currencySymbol);
-      if (scaled != null) {
-        return scaled;
+    // 1. Check for scaled currency abbreviation (e.g. 'B USD', 'M USD', 'Billion USD', 'TOTAL')
+    if (currencySymbol != null && currencySymbol.isNotEmpty) {
+      if (showSymbol) {
+        final scaled = formatScaledCurrencyPrice(price, currencySymbol);
+        if (scaled != null) {
+          return scaled;
+        }
+      } else {
+        final scaled = formatScaledCurrencyPrice(price, currencySymbol);
+        if (scaled != null) {
+          return formatInputNumberForUnit(price, currencySymbol);
+        }
       }
     }
 
-    // 1b. Check for percentage unit (BTC.D, USDT.D, etc.)
-    if (currencySymbol != null && currencySymbol.trim() == '%') {
+    // 1b. Check for percentage unit (BTC.D, USDT.D, %, etc.)
+    final upperSym = currencySymbol?.trim().toUpperCase();
+    if (upperSym != null && (upperSym == '%' || upperSym == 'BTC.D' || upperSym == 'USDT.D' || upperSym == 'ETH.D' || upperSym.endsWith('.D'))) {
       final fixed = price.toStringAsFixed(2);
       return showSymbol ? '$fixed%' : fixed;
     }
