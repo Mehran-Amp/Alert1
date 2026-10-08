@@ -102,7 +102,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   return (
     <div
       dir={isFa ? 'rtl' : 'ltr'}
-      className={`w-full max-w-full overflow-hidden p-3 rounded-2xl border transition-all shadow-sm ${
+      className={`w-full max-w-full overflow-hidden p-3 rounded-2xl border transition-all shadow-sm h-[208px] flex flex-col justify-between ${
         isLight
           ? 'bg-white border-slate-200/90 shadow-slate-100'
           : rule.isActive
@@ -110,15 +110,14 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
           : 'bg-slate-950/40 border-slate-900/60 opacity-60'
       }`}
     >
-      {/* Header: Icon, Symbol/Name, Live Price & Toggle */}
-      <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/50 min-w-0">
-        {/* Left / Start: Icon + Title info */}
+      {/* 1. Header: Icon + Dedicated Wide Title & Exchange + Toggle Switch */}
+      <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <div className="relative shrink-0">
             <img
               src={iconUrl}
               alt={displayName}
-              className="h-9 w-9 rounded-xl object-cover border border-slate-700/70 p-0.5 bg-slate-950 shrink-0"
+              className="h-8.5 w-8.5 rounded-xl object-cover border border-slate-700/70 p-0.5 bg-slate-950 shrink-0"
               onError={(e) => {
                 (e.target as any).src =
                   'https://cdn-icons-png.flaticon.com/512/2830/2830284.png';
@@ -134,7 +133,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="flex items-center gap-1.5 min-w-0">
               <span
-                className="font-black text-xs text-white truncate max-w-[100px] sm:max-w-[120px]"
+                className="font-black text-xs text-white truncate max-w-full"
                 title={displayName}
               >
                 {displayName}
@@ -144,71 +143,82 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-1 mt-0.5 min-w-0">
-              <span dir="ltr" className="px-1.5 py-0.5 rounded text-[8.5px] font-bold tracking-wider bg-slate-800/90 text-slate-300 border border-slate-700/50 shrink-0 font-mono">
+              <span dir="ltr" className="px-1.5 py-0.5 rounded text-[8.5px] font-bold tracking-wider bg-slate-800/90 text-slate-300 border border-slate-700/50 shrink-0 font-mono truncate max-w-[120px]">
                 {formatExchangeTag(rule.exchangeName)}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Right / End: Live Price & Switch */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right" dir="ltr">
-            <div dir="ltr" className="text-[13px] font-black font-mono tracking-tight text-white leading-tight">
-              {formatScaledPrice(displayP, rule.counterCurrency) ??
-                (unit === '$'
-                  ? `$${
-                      displayP >= 1000
-                        ? Math.round(displayP).toLocaleString()
-                        : displayP < 1
-                        ? displayP.toFixed(5)
-                        : displayP.toFixed(2)
-                    }`
-                  : `${
-                      displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)
-                    } ${unit}`)}
-            </div>
-            <div className="mt-0.5 flex justify-end" dir="ltr">
-              {rule.isTriggered ? (
-                <span dir="ltr" className="inline-block px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400">
-                  Done
-                </span>
-              ) : (
-                <span
-                  dir="ltr"
-                  className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-mono font-bold ${
-                    isZero
-                      ? 'bg-slate-800 text-slate-400'
-                      : isPositive
-                      ? 'bg-emerald-500/15 text-emerald-400'
-                      : 'bg-rose-500/15 text-rose-400'
-                  }`}
-                >
-                  {isZero ? '• ' : isPositive ? '+' : ''}
-                  {effectivePct.toFixed(2)}%
-                </span>
-              )}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onToggle(rule.uuid)}
-            className={`w-8 h-4.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
-              rule.isActive
-                ? isOrange
-                  ? 'bg-orange-500'
-                  : 'bg-emerald-500'
-                : 'bg-slate-800 border border-slate-700'
+        <button
+          type="button"
+          onClick={() => onToggle(rule.uuid)}
+          className={`w-8 h-4.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+            rule.isActive
+              ? isOrange
+                ? 'bg-orange-500'
+                : 'bg-emerald-500'
+              : 'bg-slate-800 border border-slate-700'
+          }`}
+          title={rule.isActive ? FA.on : FA.off}
+        >
+          <div
+            className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all ${
+              rule.isActive ? 'right-0.5' : 'left-0.5'
             }`}
-            title={rule.isActive ? FA.on : FA.off}
-          >
-            <div
-              className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all ${
-                rule.isActive ? 'right-0.5' : 'left-0.5'
+          />
+        </button>
+      </div>
+
+      {/* 2. Financial Metrics Bar: Live Price + Strikethrough Base Price + Percent/Done Badge */}
+      <div className="flex items-center justify-between gap-2 min-w-0 py-0.5">
+        <div className="min-w-0 flex-1 overflow-hidden" dir="ltr">
+          <div className="h-3 text-[10px] font-mono text-slate-400 truncate">
+            {rule.basePrice > 0 && Math.abs(displayP - rule.basePrice) > 1e-8 ? (
+              <span className="line-through">
+                {formatScaledPrice(rule.basePrice, rule.counterCurrency) ??
+                  (unit === '$'
+                    ? `$${rule.basePrice.toLocaleString()}`
+                    : `${rule.basePrice.toLocaleString()} ${unit}`)}
+              </span>
+            ) : null}
+          </div>
+          <div className="text-[15px] font-black font-mono tracking-tight text-white leading-tight truncate">
+            {formatScaledPrice(displayP, rule.counterCurrency) ??
+              (unit === '$'
+                ? `$${
+                    displayP >= 1000
+                      ? Math.round(displayP).toLocaleString()
+                      : displayP < 1
+                      ? displayP.toFixed(5)
+                      : displayP.toFixed(2)
+                  }`
+                : `${
+                    displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)
+                  } ${unit}`)}
+          </div>
+        </div>
+
+        <div className="shrink-0" dir="ltr">
+          {rule.isTriggered ? (
+            <span dir="ltr" className="inline-block px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400">
+              Done
+            </span>
+          ) : (
+            <span
+              dir="ltr"
+              className={`inline-block px-2 py-0.5 rounded text-[9.5px] font-mono font-bold ${
+                isZero
+                  ? 'bg-slate-800 text-slate-400'
+                  : isPositive
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-rose-500/15 text-rose-400'
               }`}
-            />
-          </button>
+            >
+              {isZero ? '• ' : isPositive ? '+' : ''}
+              {effectivePct.toFixed(2)}%
+            </span>
+          )}
         </div>
       </div>
 

@@ -660,180 +660,226 @@ class _WatchlistPageState extends State<WatchlistPage> {
         child: InkWell(
           onTap: () => _openEditFlow(rule),
           borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.surface,
-                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isTriggeredOneShot
-                    ? AppTokens.warning.withValues(alpha: 0.75)
-                    : (rule.isActive
-                        ? theme.colorScheme.primary.withValues(alpha: 0.25)
-                        : theme.dividerColor),
-                width: isTriggeredOneShot ? 1.5 : 1.1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+          child: SizedBox(
+            height: 184,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.colorScheme.surface,
+                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final maxLivePriceWidth = constraints.maxWidth * 0.42;
-                final prevPrice = rule.previousPrice ?? basePrice;
-                final showPrevious = prevPrice != null &&
-                    displayPrice != null &&
-                    (prevPrice - displayPrice).abs() > 1e-8;
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isTriggeredOneShot
+                      ? AppTokens.warning.withValues(alpha: 0.75)
+                      : (rule.isActive
+                          ? theme.colorScheme.primary.withValues(alpha: 0.25)
+                          : theme.dividerColor),
+                  width: isTriggeredOneShot ? 1.5 : 1.1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Builder(
+                builder: (context) {
+                  final prevPrice = rule.previousPrice ?? basePrice;
+                  final showPrevious = prevPrice != null &&
+                      displayPrice != null &&
+                      (prevPrice - displayPrice).abs() > 1e-8;
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // === ROW 1: Hero Asset + Live Price + Switch ===
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                              width: 1.2,
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // === ROW 1: Hero Asset + Dedicated Wide Title & Exchange + Switch ===
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: CryptoIcons.buildLogo(rule.baseCurrency, size: 34),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        rule.pair.displayName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14.5,
+                                          color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(Icons.edit_note_rounded, size: 15, color: theme.colorScheme.primary),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(5),
+                                      ),
+                                      child: Text(
+                                        _getExchangeDisplayName(rule.exchangeId, lang).toUpperCase(),
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        rule.marketSymbol.isNotEmpty ? rule.marketSymbol : rule.baseCurrency,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontFamily: 'monospace',
+                                          fontWeight: FontWeight.w600,
+                                          color: textMuted,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          child: CryptoIcons.buildLogo(rule.baseCurrency, size: 36),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      rule.pair.displayName,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 15,
-                                        color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                          const SizedBox(width: 6),
+                          Transform.scale(
+                            scale: 0.8,
+                            child: isTriggeredOneShot
+                                ? IconButton(
+                                    icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
+                                    onPressed: () => repository.rearmRule(rule.uuid),
+                                  )
+                                : Switch(
+                                    value: rule.isActive,
+                                    activeThumbColor: Colors.white,
+                                    activeTrackColor: theme.colorScheme.primary,
+                                    onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
                                   ),
-                                  if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
-                                    const SizedBox(width: 4),
-                                    Icon(Icons.edit_note_rounded, size: 15, color: theme.colorScheme.primary),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  _getExchangeDisplayName(rule.exchangeId, lang).toUpperCase(),
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: rule.isActive ? theme.colorScheme.primary : textMuted,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Live Price Column
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: maxLivePriceWidth),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              if (showPrevious) ...[
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 1.5),
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: lang),
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: 'monospace',
-                                        decoration: TextDecoration.lineThrough,
-                                        color: textMuted,
-                                      ),
+                        ],
+                      ),
+
+                      // === ROW 2: Financial Metrics & Live Price Bar ===
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 13,
+                                  child: showPrevious
+                                      ? FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            FormatUtils.formatPrice(prevPrice, currencySymbol: rule.counterCurrency, lang: lang),
+                                            maxLines: 1,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: 'monospace',
+                                              decoration: TextDecoration.lineThrough,
+                                              color: textMuted,
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    displayPrice != null ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: lang) : '---',
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w900,
+                                      fontFamily: 'monospace',
+                                      letterSpacing: -0.2,
+                                      color: rule.isActive
+                                          ? (changePercent != null && changePercent > 0.005
+                                              ? theme.colorScheme.primary
+                                              : (changePercent != null && changePercent < -0.005
+                                                  ? AppTokens.negative
+                                                  : theme.colorScheme.onSurface))
+                                          : textMuted,
                                     ),
                                   ),
                                 ),
                               ],
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  displayPrice != null ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency, lang: lang) : '---',
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w900,
-                                    fontFamily: 'monospace',
-                                    color: rule.isActive
-                                        ? (changePercent != null && changePercent > 0.005
-                                            ? theme.colorScheme.primary
-                                            : (changePercent != null && changePercent < -0.005
-                                                ? AppTokens.negative
-                                                : theme.colorScheme.onSurface))
-                                        : textMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isTriggeredOneShot)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: AppTokens.warning.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              if (isTriggeredOneShot) ...[
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppTokens.warning.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: AppTokens.warning.withValues(alpha: 0.3)),
-                                    ),
-                                    child: const Text(
-                                      '✅ Done',
-                                      maxLines: 1,
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTokens.warning,
-                                      ),
+                                  child: const Text(
+                                    '✅ Done',
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTokens.warning,
                                     ),
                                   ),
-                                ),
-                              ] else if (changePercent != null) ...[
+                                )
+                              else if (changePercent != null)
                                 Builder(builder: (context) {
-                                  final cp = changePercent;
-                                  if (cp == null) return const SizedBox.shrink();
+                                  final cp = changePercent!;
                                   final isZero = cp.abs() < 0.005;
                                   final isPositive = cp > 0.005;
                                   final badgeColor = isZero
@@ -844,229 +890,205 @@ class _WatchlistPageState extends State<WatchlistPage> {
                                       : badgeColor.withValues(alpha: 0.12);
                                   final prefix = isZero ? '• ' : (isPositive ? '▲ +' : '▼ ');
 
-                                  return FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                      decoration: BoxDecoration(
-                                        color: badgeBg,
-                                        borderRadius: BorderRadius.circular(5),
-                                      ),
-                                      child: Text(
-                                        '$prefix${cp.abs().toStringAsFixed(2)}%',
-                                        maxLines: 1,
-                                        style: TextStyle(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'monospace',
-                                          color: badgeColor,
-                                        ),
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: badgeBg,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '$prefix${cp.abs().toStringAsFixed(2)}%',
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'monospace',
+                                        color: badgeColor,
                                       ),
                                     ),
                                   );
-                                }),
-                              ],
+                                })
+                              else
+                                const SizedBox.shrink(),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Transform.scale(
-                          scale: 0.82,
-                          child: isTriggeredOneShot
-                              ? IconButton(
-                                  icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
-                                  onPressed: () => repository.rearmRule(rule.uuid),
-                                )
-                              : Switch(
-                                  value: rule.isActive,
-                                  activeThumbColor: Colors.white,
-                                  activeTrackColor: theme.colorScheme.primary,
-                                  onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
-                                ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
 
-                const SizedBox(height: 12),
-
-                // === ROW 2: Target Proximity Progress Gauge ===
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                rule.conditionType == AlertConditionType.priceThreshold
-                                    ? Icons.gps_fixed_rounded
-                                    : Icons.trending_up_rounded,
-                                size: 13,
-                                color: progState.color ?? theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 5),
-                              Expanded(
-                                child: Text(
-                                  _buildConditionSummary(rule, lang),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.9) : textMuted,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${progState.percentageInt}% ${lang == 'fa' ? 'تا هدف' : 'to target'}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                            color: progState.color ?? textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Stack(
+                      // === ROW 3: Target Proximity Progress Gauge ===
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Fixed Layer 1: Fixed Theme Base Color Layer
-                          Container(
-                            height: 4,
-                            width: double.infinity,
-                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
-                          ),
-                          // Dynamic Layer 2: TradingView Green (Bullish) or TradingView Red (Bearish)
-                          if (progState.color != null && progState.progressFactor > 0)
-                            FractionallySizedBox(
-                              widthFactor: progState.progressFactor,
-                              child: Container(
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: progState.color,
-                                  borderRadius: BorderRadius.circular(4),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: progState.color!.withValues(alpha: 0.4),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 1),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      rule.conditionType == AlertConditionType.priceThreshold
+                                          ? Icons.gps_fixed_rounded
+                                          : Icons.trending_up_rounded,
+                                      size: 12,
+                                      color: progState.color ?? theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        _buildConditionSummary(rule, lang),
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.9) : textMuted,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${progState.percentageInt}% ${lang == 'fa' ? 'تا هدف' : 'to target'}',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'monospace',
+                                  color: progState.color ?? textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  height: 3.5,
+                                  width: double.infinity,
+                                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.75),
+                                ),
+                                if (progState.color != null && progState.progressFactor > 0)
+                                  FractionallySizedBox(
+                                    widthFactor: progState.progressFactor,
+                                    child: Container(
+                                      height: 3.5,
+                                      decoration: BoxDecoration(
+                                        color: progState.color,
+                                        borderRadius: BorderRadius.circular(4),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: progState.color!.withValues(alpha: 0.4),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
 
-                const SizedBox(height: 12),
-
-                // === ROW 3: Time Interval + Sound/TTS Badges + Manual Sync Button ===
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      // === ROW 4: Time Interval + Sound/TTS Badges + Manual Sync Button ===
+                      Row(
                         children: [
-                          Icon(Icons.timer_outlined, size: 11, color: theme.colorScheme.primary),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatInterval(rule.checkIntervalSeconds, lang),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.primary,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.timer_outlined, size: 10.5, color: theme.colorScheme.primary),
+                                const SizedBox(width: 3.5),
+                                Text(
+                                  _formatInterval(rule.checkIntervalSeconds, lang),
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    if (rule.ttsEnabled)
-                      Icon(Icons.record_voice_over_rounded, size: 13, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
-                    if (rule.soundEnabled)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Icon(Icons.volume_up_rounded, size: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                      ),
-                    const Spacer(),
-                    // Next check or last check time
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.hourglass_bottom_rounded,
-                          size: 11,
-                          color: rule.isActive ? theme.colorScheme.primary : textMuted,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          _formatNextCheckTime(rule, lang),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.7) : textMuted,
+                          const SizedBox(width: 5),
+                          if (rule.ttsEnabled)
+                            Icon(Icons.record_voice_over_rounded, size: 12, color: theme.colorScheme.primary.withValues(alpha: 0.7)),
+                          if (rule.soundEnabled)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 3),
+                              child: Icon(Icons.volume_up_rounded, size: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            ),
+                          const Spacer(),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.hourglass_bottom_rounded,
+                                size: 10.5,
+                                color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                _formatNextCheckTime(rule, lang),
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: rule.isActive ? theme.colorScheme.onSurface.withValues(alpha: 0.7) : textMuted,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    // Quick Manual Check Button
-                    InkWell(
-                      onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isChecking)
-                              SizedBox(
-                                width: 10,
-                                height: 10,
-                                child: CircularProgressIndicator(strokeWidth: 1.5, color: theme.colorScheme.primary),
-                              )
-                            else
-                              Icon(Icons.sync_rounded, size: 12, color: theme.colorScheme.primary),
-                            const SizedBox(width: 3),
-                            Text(
-                              AppStrings.get('check_now', lang),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
+                            borderRadius: BorderRadius.circular(5),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isChecking)
+                                    SizedBox(
+                                      width: 9,
+                                      height: 9,
+                                      child: CircularProgressIndicator(strokeWidth: 1.5, color: theme.colorScheme.primary),
+                                    )
+                                  else
+                                    Icon(Icons.sync_rounded, size: 11, color: theme.colorScheme.primary),
+                                  const SizedBox(width: 2.5),
+                                  Text(
+                                    AppStrings.get('check_now', lang),
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
