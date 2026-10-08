@@ -657,15 +657,21 @@ BONBAST_MAP = {
     'EMAMI': 'emami1',
     'COIN_BAHAR': 'azadi1',
     'BAHAR': 'azadi1',
-    'COIN_HALF': 'half1',
-    'HALF_COIN': 'half1',
-    'COIN_NIM': 'half1',
-    'COIN_QUARTER': 'quarter1',
-    'QUARTER_COIN': 'quarter1',
-    'COIN_ROB': 'quarter1',
-    'COIN_GRAM': 'gram',
-    'GRAM_COIN': 'gram',
-    'COIN_GERAMI': 'gram',
+    'COIN_HALF': 'azadi1_2',
+    'HALF_COIN': 'azadi1_2',
+    'COIN_NIM': 'azadi1_2',
+    'NIM_SEKKEH': 'azadi1_2',
+    'COIN_QUARTER': 'azadi1_4',
+    'QUARTER_COIN': 'azadi1_4',
+    'COIN_ROB': 'azadi1_4',
+    'ROB_SEKKEH': 'azadi1_4',
+    'COIN_GRAM': 'azadi1g',
+    'GRAM_COIN': 'azadi1g',
+    'COIN_GERAMI': 'azadi1g',
+    'SEKKEH_GERAMI': 'azadi1g',
+    'BOURSE': 'bourse',
+    'TEDPIX_BONBAST': 'bourse',
+    'BITCOIN_BONBAST': 'bitcoin',
 }
 
 TSETMC_INDEX_MAP = {
@@ -877,7 +883,7 @@ async def fetch_price_with_trace(
     # -------------------------------------------------------------
     # 1. IRANIAN EXCHANGES & TOMAN MARKETS
     # -------------------------------------------------------------
-    is_iranian = ex in ['tabdeal', 'nobitex', 'wallex', 'bitpin', 'tetherland', 'abantether', 'ramzinex', 'bitbarg', 'sarmayex', 'exir', 'iran_market'] or \
+    is_iranian = ex in ['tabdeal', 'nobitex', 'wallex', 'bitpin', 'tetherland', 'abantether', 'ramzinex', 'bitbarg', 'sarmayex', 'exir', 'iran_market', 'bonbast'] or \
                  sym_clean.endswith('TMN') or sym_clean.endswith('IRT') or sym_clean.endswith('RLS') or \
                  sym_clean.startswith('USDT_') or sym_clean.startswith('GOLD_')
 
@@ -2734,6 +2740,55 @@ async def get_live_price(exchange: str, symbol: str):
                 res[key] = meta[key]
         return res
     raise HTTPException(status_code=502, detail="Unable to fetch live price from market sources.")
+
+@app.get("/api/bonbast")
+@app.get("/bonbast")
+async def get_bonbast_live_data():
+    """Returns real-time free market currency, gold, and coin rates directly from Bonbast.com (Primary Reference)"""
+    now_bb = time.time()
+    cached = IRAN_MARKET_CACHE.get('__bonbast_bulk__')
+    if cached and (now_bb - cached[1]) < CACHE_TTL_IRAN:
+        return {"status": "ok", "source": "bonbast.com (cached)", **cached[2]}
+
+    loop = asyncio.get_event_loop()
+    def _fetch_bb_sync():
+        import urllib.request, urllib.parse, http.cookiejar, json
+        cj = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        req1 = urllib.request.Request('https://bonbast.com/', headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        })
+        with opener.open(req1, timeout=6) as r1:
+            html = r1.read().decode('utf-8', errors='ignore')
+        m = re.search(r'param:\s*[\'"]([^\'"]+)[\'"]', html)
+        if m:
+            data_bytes = urllib.parse.urlencode({'param': m.group(1)}).encode('utf-8')
+            req2 = urllib.request.Request('https://bonbast.com/json', data=data_bytes, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://bonbast.com/',
+                'Origin': 'https://bonbast.com',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            })
+            with opener.open(req2, timeout=6) as r2:
+                parsed = json.loads(r2.read().decode('utf-8'))
+                if isinstance(parsed, dict) and ('usd1' in parsed or 'mithqal' in parsed or 'gol18' in parsed):
+                    return parsed
+        return None
+
+    try:
+        data = await loop.run_in_executor(None, _fetch_bb_sync)
+        if data:
+            IRAN_MARKET_CACHE['__bonbast_bulk__'] = (0.0, time.time(), data)
+            return {"status": "ok", "source": "bonbast.com (live)", **data}
+        if cached:
+            return {"status": "ok", "source": "bonbast.com (stale-fallback)", **cached[2]}
+    except Exception as e:
+        logger.warning(f"Bonbast endpoint error: {e}")
+        if cached:
+            return {"status": "ok", "source": "bonbast.com (stale-fallback)", **cached[2]}
+    raise HTTPException(status_code=502, detail="Failed to fetch live rates from Bonbast")
 
 @app.get("/api/markets/status", dependencies=API_DEP)
 @app.get("/markets/status", dependencies=API_DEP)

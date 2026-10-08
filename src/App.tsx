@@ -61,7 +61,7 @@ export interface AlertRule {
   baseCurrency: string;
   counterCurrency: string;
   marketSymbol: string;
-  assetCategory: 'crypto' | 'stock' | 'forex' | 'bond' | 'commodity' | 'index';
+  assetCategory: 'crypto' | 'stock' | 'forex' | 'bond' | 'commodity' | 'index' | 'iran_market';
   checkIntervalSeconds: number;
   conditionType: 'PERCENT_CHANGE' | 'PRICE_THRESHOLD' | 'VOLUME_SURGE';
   direction: 'BOTH' | 'ABOVE' | 'BELOW';
@@ -191,6 +191,12 @@ export const formatScaledPrice = (price: number, unit?: string): string | null =
   return `\u202A${prefix}${numStr}${scale}\u202C`;
 };
 
+export const isTomanRule = (rule: { counterCurrency?: string; exchangeId?: string }) => {
+  const c = (rule.counterCurrency || '').toUpperCase().trim();
+  const ex = (rule.exchangeId || '').toLowerCase();
+  return c === 'TMN' || c === 'IRT' || c === 'TOMAN' || c === 'ت' || rule.counterCurrency === 'تومان' || ex.includes('nobitex') || ex.includes('bonbast');
+};
+
 const IRANIAN_POPULAR_PAIRS = [
   'BTC', 'ETH', 'SOL', 'USDT', 'XRP', 'DOGE', 'TON', 'PEPE', 'SHIB', 'SUI',
   'NEAR', 'TRX', 'ADA', 'AVAX', 'LINK', 'NOT', 'FLOKI', 'BONK', 'FET', 'APT',
@@ -204,8 +210,14 @@ const IRANIAN_POPULAR_PAIRS = [
   'ZEN', 'RVN', 'CKB', 'ONE', 'WLD', 'ARKM', 'IO', 'GRASS', 'ATH', 'GLM'
 ];
 
+export const BONBAST_POPULAR_PAIRS = [
+  'USDT', 'USD', 'EUR', 'GBP', 'AED', 'TRY', 'GOLD18', 'MITHQAL', 'COIN_EMAMI', 'COIN_BAHAR', 'COIN_HALF', 'COIN_QUARTER', 'COIN_GRAM',
+  'CAD', 'AUD', 'CHF', 'CNY', 'IQD', 'KWD', 'SAR', 'QAR', 'OMR', 'BHD', 'AFN', 'RUB', 'INR', 'JPY'
+];
+
 // === 1. COMPLETE 40+ EXCHANGES CATALOG (Sorted Alphabetically A-Z by English Name) ===
 const ALL_EXCHANGES: ExchangeInfo[] = [
+  { id: 'bonbast', name: 'Bonbast (بن‌بست)', category: 'middleEast', countryBadge: '🇮🇷 مرجع اصلی آزاد', defaultCounter: 'TMN', availableCounters: ['TMN'], pairsCount: 38, pairsList: BONBAST_POPULAR_PAIRS },
   { id: 'abantether', name: 'AbanTether', category: 'middleEast', countryBadge: '🇮🇷 Iran', defaultCounter: 'TMN', availableCounters: ['TMN', 'USDT'], pairsCount: 1000, pairsList: IRANIAN_POPULAR_PAIRS },
   { id: 'binance', name: 'Binance', category: 'tier1', countryBadge: '🌐 Global #1', defaultCounter: 'USDT', availableCounters: ['USDT', 'BTC', 'ETH'], pairsCount: 1420, pairsList: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'POL', 'RENDER', 'S', 'PEPE', 'DOGE', 'ADA', 'AVAX', 'NEAR', 'SUI', 'LINK', 'DOT'] },
   { id: 'bingx', name: 'BingX', category: 'tier1', countryBadge: '🌐 Global', defaultCounter: 'USDT', availableCounters: ['USDT'], pairsCount: 720, pairsList: ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'PEPE'] },
@@ -290,7 +302,7 @@ interface MacroAssetMeta {
   symbol: string;
   name: string;
   nameFa: string;
-  category: 'bond' | 'forex' | 'stock' | 'commodity' | 'index';
+  category: 'bond' | 'forex' | 'stock' | 'commodity' | 'index' | 'iran_market';
   marketName: string;
   icon: string;
   currentPrice: number;
@@ -299,6 +311,32 @@ interface MacroAssetMeta {
 }
 
 const MACRO_ASSETS: Record<string, MacroAssetMeta> = {
+  // === BONBAST IRAN FREE MARKET (PRIMARY REFERENCE: BONBAST.COM) ===
+  GOLD18_BONBAST: { symbol: 'GOLD18', name: 'Gold 18K (Gram)', nameFa: 'طلای ۱۸ عیار - هر گرم (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 26296227, unit: 'ت', change24h: 0.8 },
+  MITHQAL_BONBAST: { symbol: 'MITHQAL', name: 'Gold Mithqal (Melted)', nameFa: 'مظنه آبشده / مثقال طلا تهران (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 113910000, unit: 'ت', change24h: 0.9 },
+  EMAMI_BONBAST: { symbol: 'EMAMI', name: 'Emami Gold Coin', nameFa: 'سکه تمام طرح جدید / امامی (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 270000000, unit: 'ت', change24h: 0.6 },
+  BAHAR_BONBAST: { symbol: 'AZADI', name: 'Bahar Azadi Coin', nameFa: 'سکه تمام بهار آزادی طرح قدیم (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 259000000, unit: 'ت', change24h: 0.5 },
+  HALF_BONBAST: { symbol: 'HALF', name: 'Half Azadi Coin', nameFa: 'نیم‌سکه بهار آزادی (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 143000000, unit: 'ت', change24h: 0.4 },
+  QUARTER_BONBAST: { symbol: 'QUARTER', name: 'Quarter Azadi Coin', nameFa: 'ربع‌سکه بهار آزادی (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 76500000, unit: 'ت', change24h: 0.4 },
+  GRAM_BONBAST: { symbol: 'GRAM', name: 'Central Bank Gram Coin', nameFa: 'سکه یک گرمی بانک مرکزی (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 37000000, unit: 'ت', change24h: 0.2 },
+  USD_BONBAST: { symbol: 'USD/TMN', name: 'US Dollar (Tehran Cash)', nameFa: 'دلار آزاد تهران - اسکناس (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 268200, unit: 'ت', change24h: 0.3 },
+  EUR_BONBAST: { symbol: 'EUR/TMN', name: 'Euro Cash', nameFa: 'یورو آزاد تهران - اسکناس (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 300400, unit: 'ت', change24h: 0.2 },
+  AED_BONBAST: { symbol: 'AED/TMN', name: 'UAE Dirham Cash', nameFa: 'درهم امارات - اسکناس/حواله (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 73050, unit: 'ت', change24h: 0.1 },
+  GBP_BONBAST: { symbol: 'GBP/TMN', name: 'British Pound Cash', nameFa: 'پوند انگلیس - اسکناس (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323329.png', currentPrice: 354400, unit: 'ت', change24h: -0.1 },
+  TRY_BONBAST: { symbol: 'TRY/TMN', name: 'Turkish Lira', nameFa: 'لیر ترکیه (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 5450, unit: 'ت', change24h: 0.1 },
+  IQD_BONBAST: { symbol: 'IQD/TMN', name: 'Iraqi Dinar (100)', nameFa: '۱۰۰ دینار عراق (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 17700, unit: 'ت', change24h: 0.0 },
+  BOURSE_BONBAST: { symbol: 'TEDPIX', name: 'Tehran Stock Exchange Index', nameFa: 'شاخص کل بورس اوراق بهادار تهران (TEDPIX)', category: 'iran_market', marketName: 'بورس تهران (مرجع بن‌بست)', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', currentPrice: 1904324, unit: 'واحد', change24h: 0.35 },
+  AFN_BONBAST: { symbol: 'AFN/TMN', name: 'Afghan Afghani (Herat)', nameFa: 'افغانی افغانستان - بازار هرات (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 4125, unit: 'ت', change24h: 0.1 },
+  CAD_BONBAST: { symbol: 'CAD/TMN', name: 'Canadian Dollar Cash', nameFa: 'دلار کانادا - اسکناس آزاد (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323277.png', currentPrice: 188300, unit: 'ت', change24h: 0.2 },
+  AUD_BONBAST: { symbol: 'AUD/TMN', name: 'Australian Dollar Cash', nameFa: 'دلار استرالیا - اسکناس آزاد (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323367.png', currentPrice: 186500, unit: 'ت', change24h: 0.1 },
+  CHF_BONBAST: { symbol: 'CHF/TMN', name: 'Swiss Franc Cash', nameFa: 'فرانک سوئیس - اسکناس آزاد (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323316.png', currentPrice: 321800, unit: 'ت', change24h: 0.3 },
+  CNY_BONBAST: { symbol: 'CNY/TMN', name: 'Chinese Yuan Cash', nameFa: 'یوان چین - اسکناس آزاد (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 40000, unit: 'ت', change24h: 0.2 },
+  KWD_BONBAST: { symbol: 'KWD/TMN', name: 'Kuwaiti Dinar', nameFa: 'دینار کویت (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 862550, unit: 'ت', change24h: 0.1 },
+  SAR_BONBAST: { symbol: 'SAR/TMN', name: 'Saudi Riyal Cash', nameFa: 'ریال عربستان (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 71500, unit: 'ت', change24h: 0.1 },
+  QAR_BONBAST: { symbol: 'QAR/TMN', name: 'Qatari Riyal Cash', nameFa: 'ریال قطر (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 73550, unit: 'ت', change24h: 0.1 },
+  OMR_BONBAST: { symbol: 'OMR/TMN', name: 'Omani Rial Cash', nameFa: 'ریال عمان (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323310.png', currentPrice: 697550, unit: 'ت', change24h: 0.1 },
+  JPY_BONBAST: { symbol: 'JPY/TMN', name: 'Japanese Yen (10)', nameFa: '۱۰ ین ژاپن (مرجع بن‌بست)', category: 'iran_market', marketName: 'بن‌بست (bonbast.com)', icon: 'https://cdn-icons-png.flaticon.com/512/323/323313.png', currentPrice: 16950, unit: 'ت', change24h: 0.2 },
+
   // US Treasury Yields & Bonds
   US10Y: { symbol: 'US10Y (^TNX)', name: 'US 10-Year Treasury Yield', nameFa: 'بازده اوراق قرضه ۱۰ ساله آمریکا (US10Y)', category: 'bond', marketName: 'US Treasury', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', currentPrice: 4.28, unit: '%', change24h: 0.8 },
   US02Y: { symbol: 'US02Y (^IRX)', name: 'US 2-Year Treasury Yield', nameFa: 'بازده اوراق قرضه ۲ ساله آمریکا (US02Y)', category: 'bond', marketName: 'US Treasury', icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png', currentPrice: 4.15, unit: '%', change24h: 0.4 },
@@ -671,9 +709,11 @@ export default function App() {
 
   // Stocks / Forex / US 10Y Bond Flow
   const [macroStep, setMacroStep] = useState<1 | 2>(1);
-  const [macroCategoryFilter, setMacroCategoryFilter] = useState<'all' | 'bond' | 'forex' | 'stock' | 'commodity' | 'index'>('all');
+  const [macroCategoryFilter, setMacroCategoryFilter] = useState<'all' | 'bond' | 'forex' | 'stock' | 'commodity' | 'index' | 'iran_market'>('all');
   const [macroSearchQuery, setMacroSearchQuery] = useState<string>('');
-  const [selectedMacroKey, setSelectedMacroKey] = useState<string>('US10Y');
+  const [selectedMacroKey, setSelectedMacroKey] = useState<string>('GOLD18_BONBAST');
+  const [bonbastLive, setBonbastLive] = useState<any>(null);
+  const [bonbastLastSync, setBonbastLastSync] = useState<Date | null>(null);
 
   // Common Frequency & Condition inputs
   const [unitType, setUnitType] = useState<'seconds' | 'minutes' | 'hours'>('minutes');
@@ -751,18 +791,40 @@ export default function App() {
 
   // Helper to resolve live market price, unit and 24h stats for any exchange pair with 100% offline safety
   const getCryptoMarketPrice = (coin: string, exchangeId: string, counterCurrency: string) => {
-    const isIranianExchange = ['nobitex', 'wallex', 'tabdeal', 'bitbarg', 'abantether', 'ramzinex', 'tetherland', 'sarmayex'].includes(exchangeId.toLowerCase());
-    const isTmn = counterCurrency === 'TMN' || counterCurrency === 'IRT';
+    const exId = (exchangeId || '').toLowerCase();
+    const isNobitex = exId.includes('nobitex');
+    const isBonbast = exId.includes('bonbast');
+    const isIranianExchange = isNobitex || isBonbast || ['wallex', 'tabdeal', 'bitbarg', 'abantether', 'ramzinex', 'tetherland', 'sarmayex'].includes(exId);
+    // For Nobitex or Bonbast, ALWAYS display in Toman across all stages as requested!
+    const isTmn = isNobitex || isBonbast || counterCurrency === 'TMN' || counterCurrency === 'IRT' || counterCurrency === 'تومان' || counterCurrency === 'ت';
     const cUpper = coin.toUpperCase();
-    const exPrices = exchangeSpecificPrices[exchangeId.toLowerCase()];
+    const exPrices = exchangeSpecificPrices[exId];
     const exData = exPrices ? exPrices[cUpper] : undefined;
     const irData = exData || iranianMarketPrices[cUpper];
     const binanceMeta = cryptoPrices[cUpper];
-    const rate = usdtTomanRate > 10000 ? usdtTomanRate : 267000;
+    const rate = usdtTomanRate > 10000 ? usdtTomanRate : 268200;
     const lastKnown = lastKnownCoinPrices[cUpper];
 
-    // Special case for USDT counter USDT
-    if (cUpper === 'USDT' && (counterCurrency === 'USDT' || counterCurrency === 'USD')) {
+    // Priority Fix: USDT in Nobitex / Iranian exchanges / Toman counter currency
+    // Always returns the genuine live Toman rate (e.g. 268,398 تومان) and unit تومان!
+    if (cUpper === 'USDT' && (isNobitex || isBonbast || isTmn)) {
+      const usdtPrice = (exData && exData.priceTmn > 0)
+        ? exData.priceTmn
+        : (irData && irData.priceTmn > 0 ? irData.priceTmn : rate);
+      const h = exData?.high24hTmn || Math.round(usdtPrice * 1.01);
+      const l = exData?.low24hTmn || Math.round(usdtPrice * 0.99);
+      const ch = exData?.change24h || irData?.change24h || 0.5;
+      return {
+        price: usdtPrice,
+        unit: 'تومان',
+        high24h: h,
+        low24h: l,
+        change24h: ch,
+      };
+    }
+
+    // Special case for Global Exchanges only: USDT counter USDT/USD
+    if (cUpper === 'USDT' && !isIranianExchange && (counterCurrency === 'USDT' || counterCurrency === 'USD')) {
       return {
         price: 1.0,
         unit: '$',
@@ -946,6 +1008,120 @@ export default function App() {
             } catch (_) {}
             return updated;
           });
+        }
+      } catch (_) {}
+
+      // 0. BONBAST.COM - PRIMARY REFERENCE FOR IRAN FREE MARKET (CURRENCIES & GOLD IN TOMAN)
+      try {
+        const bbRes = await fetch('/api/bonbast');
+        if (bbRes.ok) {
+          const bbData = await bbRes.json();
+          if (bbData && (bbData.usd1 || bbData.gol18 || bbData.mithqal)) {
+            setBonbastLive(bbData);
+            setBonbastLastSync(new Date());
+            const bbUsd = parseFloat(bbData.usd1 || '0');
+            if (bbUsd > 10000) {
+              setUsdtTomanRate(bbUsd);
+              try {
+                localStorage.setItem('alarmer_usdt_tmn_rate', bbUsd.toString());
+              } catch (_) {}
+            }
+
+            // Sync Bonbast to Macro Assets in Toman
+            setMacroPrices((prev) => {
+              const updated = { ...prev };
+              if (bbData.usd1 && updated['USD_BONBAST']) {
+                updated['USD_BONBAST'] = { ...updated['USD_BONBAST'], currentPrice: parseFloat(bbData.usd1) };
+              }
+              if (bbData.eur1 && updated['EUR_BONBAST']) {
+                updated['EUR_BONBAST'] = { ...updated['EUR_BONBAST'], currentPrice: parseFloat(bbData.eur1) };
+              }
+              if (bbData.aed1 && updated['AED_BONBAST']) {
+                updated['AED_BONBAST'] = { ...updated['AED_BONBAST'], currentPrice: parseFloat(bbData.aed1) };
+              }
+              if (bbData.gbp1 && updated['GBP_BONBAST']) {
+                updated['GBP_BONBAST'] = { ...updated['GBP_BONBAST'], currentPrice: parseFloat(bbData.gbp1) };
+              }
+              if (bbData.try1 && updated['TRY_BONBAST']) {
+                updated['TRY_BONBAST'] = { ...updated['TRY_BONBAST'], currentPrice: parseFloat(bbData.try1) };
+              }
+              if (bbData.gol18 && updated['GOLD18_BONBAST']) {
+                updated['GOLD18_BONBAST'] = { ...updated['GOLD18_BONBAST'], currentPrice: parseFloat(bbData.gol18) };
+              }
+              if (bbData.mithqal && updated['MITHQAL_BONBAST']) {
+                updated['MITHQAL_BONBAST'] = { ...updated['MITHQAL_BONBAST'], currentPrice: parseFloat(bbData.mithqal) };
+              }
+              if (bbData.emami1 && updated['EMAMI_BONBAST']) {
+                updated['EMAMI_BONBAST'] = { ...updated['EMAMI_BONBAST'], currentPrice: parseFloat(bbData.emami1) };
+              }
+              if (bbData.azadi1 && updated['BAHAR_BONBAST']) {
+                updated['BAHAR_BONBAST'] = { ...updated['BAHAR_BONBAST'], currentPrice: parseFloat(bbData.azadi1) };
+              }
+              if (bbData.azadi1_2 && updated['HALF_BONBAST']) {
+                updated['HALF_BONBAST'] = { ...updated['HALF_BONBAST'], currentPrice: parseFloat(bbData.azadi1_2) };
+              }
+              if (bbData.azadi1_4 && updated['QUARTER_BONBAST']) {
+                updated['QUARTER_BONBAST'] = { ...updated['QUARTER_BONBAST'], currentPrice: parseFloat(bbData.azadi1_4) };
+              }
+              if (bbData.azadi1g && updated['GRAM_BONBAST']) {
+                updated['GRAM_BONBAST'] = { ...updated['GRAM_BONBAST'], currentPrice: parseFloat(bbData.azadi1g) };
+              }
+              if (bbData.iqd1 && updated['IQD_BONBAST']) {
+                updated['IQD_BONBAST'] = { ...updated['IQD_BONBAST'], currentPrice: parseFloat(bbData.iqd1) };
+              }
+              if (bbData.usd1 && updated['USDT_TMN']) {
+                updated['USDT_TMN'] = { ...updated['USDT_TMN'], currentPrice: parseFloat(bbData.usd1) };
+              }
+              try {
+                localStorage.setItem('alarmer_macro_prices', JSON.stringify(updated));
+              } catch (_) {}
+              return updated;
+            });
+
+            // Map Bonbast rates to exchangeSpecificPrices['bonbast']
+            const bonbastPrices: Record<string, { priceTmn: number; priceUsdt: number; change24h: number }> = {};
+            const curRate = bbUsd > 10000 ? bbUsd : 267900;
+            const bonbastKeyMap: Record<string, string> = {
+              'USDT': bbData.usd1,
+              'USD': bbData.usd1,
+              'EUR': bbData.eur1,
+              'GBP': bbData.gbp1,
+              'AED': bbData.aed1,
+              'TRY': bbData.try1,
+              'CAD': bbData.cad1,
+              'AUD': bbData.aud1,
+              'CHF': bbData.chf1,
+              'CNY': bbData.cny1,
+              'GOLD18': bbData.gol18,
+              'MITHQAL': bbData.mithqal,
+              'COIN_EMAMI': bbData.emami1,
+              'COIN_BAHAR': bbData.azadi1,
+              'COIN_HALF': bbData.azadi1_2,
+              'COIN_QUARTER': bbData.azadi1_4,
+              'COIN_GRAM': bbData.azadi1g,
+              'IQD': bbData.iqd1,
+              'KWD': bbData.kwd1,
+              'SAR': bbData.sar1,
+              'QAR': bbData.qar1,
+              'OMR': bbData.omr1,
+              'BHD': bbData.bhd1,
+              'AFN': bbData.afn1,
+              'RUB': bbData.rub1,
+              'INR': bbData.inr1,
+              'JPY': bbData.jpy1,
+            };
+            Object.keys(bonbastKeyMap).forEach((sym) => {
+              const val = parseFloat(bonbastKeyMap[sym] || '0');
+              if (val > 0) {
+                bonbastPrices[sym] = { priceTmn: val, priceUsdt: val / curRate, change24h: 0.5 };
+                updateLastKnownCoinPrice(sym, val, val / curRate);
+              }
+            });
+            setExchangeSpecificPrices((prev) => ({
+              ...prev,
+              bonbast: bonbastPrices,
+            }));
+          }
         }
       } catch (_) {}
 
@@ -2031,6 +2207,62 @@ export default function App() {
         </div>
       </header>
 
+      {/* Live Bonbast Reference Bar for Iranian Free Market, Currencies & Gold */}
+      <div className={`w-full py-2 px-4 lg:px-8 border-b ${isLight ? 'bg-emerald-50/80 border-emerald-200/70 text-slate-800' : 'bg-slate-900/90 border-slate-800 text-slate-300'} text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs`}>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            💎 مرجع اصلی بازار ارز و طلا: بن‌بست (bonbast.com)
+          </span>
+          <span className="text-slate-500 hidden sm:inline">•</span>
+          <span className="text-[11px] text-slate-400 hidden sm:inline">نوبیتکس و والکس: مرجع ثانویه</span>
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-4 font-mono text-xs overflow-x-auto py-0.5 custom-scrollbar">
+          {bonbastLive?.usd1 ? (
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-slate-400 text-[11px]">💵 دلار آزاد:</span>
+              <strong className="text-emerald-400 font-bold font-mono">{Math.round(parseFloat(bonbastLive.usd1)).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-slate-400 text-[11px]">💵 نرخ مبنا:</span>
+              <strong className="text-emerald-400 font-bold font-mono">{Math.round(usdtTomanRate > 10000 ? usdtTomanRate : 267900).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          )}
+          {bonbastLive?.gol18 && (
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-slate-400 text-[11px]">🪙 گرم طلا ۱۸:</span>
+              <strong className="text-amber-300 font-bold font-mono">{Math.round(parseFloat(bonbastLive.gol18)).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          )}
+          {bonbastLive?.emami1 && (
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-slate-400 text-[11px]">🟡 سکه امامی:</span>
+              <strong className="text-amber-400 font-bold font-mono">{Math.round(parseFloat(bonbastLive.emami1)).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          )}
+          {bonbastLive?.mithqal && (
+            <div className="flex items-center gap-1 shrink-0 hidden md:flex">
+              <span className="text-slate-400 text-[11px]">⚖️ مثقال آبشده:</span>
+              <strong className="text-white font-bold font-mono">{Math.round(parseFloat(bonbastLive.mithqal)).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          )}
+          {bonbastLive?.azadi1_2 && (
+            <div className="flex items-center gap-1 shrink-0 hidden lg:flex">
+              <span className="text-slate-400 text-[11px]">🪙 نیم‌سکه:</span>
+              <strong className="text-white font-bold font-mono">{Math.round(parseFloat(bonbastLive.azadi1_2)).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          )}
+          {bonbastLive?.aed1 && (
+            <div className="flex items-center gap-1 shrink-0 hidden xl:flex">
+              <span className="text-slate-400 text-[11px]">🇦🇪 درهم:</span>
+              <strong className="text-white font-bold font-mono">{Math.round(parseFloat(bonbastLive.aed1)).toLocaleString('fa-IR')} تومان</strong>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Toast Alert */}
       {toastMessage && (
         <div className={`fixed bottom-6 left-6 z-50 ${isLight ? 'bg-white border-emerald-500 shadow-xl text-slate-900' : 'bg-slate-900 border-emerald-500/50 text-emerald-300 shadow-2xl'} text-xs px-4 py-3 rounded-2xl border flex items-center gap-2 animate-bounce`}>
@@ -2850,7 +3082,7 @@ export default function App() {
                           )}
                         </div>
                         {(() => {
-                          const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                          const isTmnRule = isTomanRule(rule);
                           return (
                             <div className="flex items-center gap-1.5 shrink-0" dir="ltr">
                               <span className="font-mono font-black text-xs text-white block">
@@ -2870,7 +3102,7 @@ export default function App() {
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-[10px] gap-2">
                           {(() => {
-                            const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                            const isTmnRule = isTomanRule(rule);
                             return (
                               <span className="text-slate-400 truncate">
                                 شرط: {rule.conditionType === 'PRICE_THRESHOLD'
@@ -3801,10 +4033,11 @@ export default function App() {
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
                       {[
                         { id: 'all', label: currentLang === 'fa' ? 'همه دارایی‌ها' : 'All Assets', icon: '🌐' },
-                        { id: 'bond', label: currentLang === 'fa' ? 'اوراق قرضه آمریکا (US10Y)' : 'US Bonds (US10Y)', icon: '🏛️' },
+                        { id: 'iran_market', label: currentLang === 'fa' ? '💎 بن‌بست (ارز آزاد، طلا و سکه)' : '💎 Bonbast (Forex & Gold)', icon: '💎' },
+                        { id: 'commodity', label: currentLang === 'fa' ? 'طلا و نفت جهانی' : 'Global Commodities', icon: '🪙' },
                         { id: 'forex', label: currentLang === 'fa' ? 'جفت‌ارزهای فارکس' : 'Forex Pairs', icon: '💱' },
+                        { id: 'bond', label: currentLang === 'fa' ? 'اوراق قرضه آمریکا (US10Y)' : 'US Bonds (US10Y)', icon: '🏛️' },
                         { id: 'stock', label: currentLang === 'fa' ? 'سهام آمریکا (NASDAQ/NYSE)' : 'US Equities (NASDAQ/NYSE)', icon: '📈' },
-                        { id: 'commodity', label: currentLang === 'fa' ? 'طلا و نفت' : 'Gold & Commodities', icon: '🪙' },
                         { id: 'index', label: currentLang === 'fa' ? 'شاخص‌های کلان' : 'Global Indices', icon: '📊' },
                       ].map((tab) => (
                         <button
@@ -3854,7 +4087,11 @@ export default function App() {
                                 <span className="text-blue-400 font-bold">{asset.marketName}</span>
                                 <span>•</span>
                                 <span className="font-mono font-bold text-slate-200">
-                                  {asset.unit === '$' ? `$${asset.currentPrice.toLocaleString()}` : `${asset.currentPrice.toLocaleString()}${asset.unit}`}
+                                  {asset.unit === '$'
+                                    ? `$${asset.currentPrice.toLocaleString()}`
+                                    : asset.unit === 'ت'
+                                    ? `${Math.round(asset.currentPrice).toLocaleString('fa-IR')} تومان`
+                                    : `${asset.currentPrice.toLocaleString()}${asset.unit}`}
                                 </span>
                               </div>
                             </div>
@@ -4030,41 +4267,44 @@ export default function App() {
                         {(() => {
                           const meta = macroPrices[selectedMacroKey] || macroPrices.US10Y;
                           const curP = meta.currentPrice;
-                          const h24 = curP * 1.02;
-                          const l24 = curP * 0.98;
+                          const isTmn = meta.unit === 'ت' || meta.category === 'iran_market';
+                          const h24 = isTmn ? Math.round(curP * 1.015) : curP * 1.02;
+                          const l24 = isTmn ? Math.round(curP * 0.985) : curP * 0.98;
                           return (
                             <div className="space-y-1">
-                              <span className="text-[10px] text-slate-400 block font-semibold">تک‌لمس سریع بر اساس سقف و کف روزانه:</span>
+                              <span className="text-[10px] text-slate-400 block font-semibold">تک‌لمس سریع بر اساس سقف و کف روزانه {isTmn ? '(به تومان)' : ''}:</span>
                               <div className="grid grid-cols-2 gap-2">
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    const val = isTmn ? h24.toString() : h24.toFixed(2);
                                     if (direction === 'BOTH') {
-                                      setUpperPriceStr(h24.toFixed(2));
+                                      setUpperPriceStr(val);
                                     } else {
-                                      setTargetValueStr(h24.toFixed(2));
+                                      setTargetValueStr(val);
                                       setDirection('ABOVE');
                                     }
                                   }}
                                   className="py-1 px-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 font-bold text-[10px] flex items-center justify-between transition-all"
                                 >
                                   <span>🔼 سقف ۲۴h:</span>
-                                  <span className="font-mono font-black">{meta.unit === '$' ? `$${h24.toFixed(2)}` : `${h24.toFixed(2)}${meta.unit}`}</span>
+                                  <span className="font-mono font-black">{isTmn ? `${h24.toLocaleString('fa-IR')} تومان` : (meta.unit === '$' ? `$${h24.toFixed(2)}` : `${h24.toFixed(2)}${meta.unit}`)}</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    const val = isTmn ? l24.toString() : l24.toFixed(2);
                                     if (direction === 'BOTH') {
-                                      setLowerPriceStr(l24.toFixed(2));
+                                      setLowerPriceStr(val);
                                     } else {
-                                      setTargetValueStr(l24.toFixed(2));
+                                      setTargetValueStr(val);
                                       setDirection('BELOW');
                                     }
                                   }}
                                   className="py-1 px-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-[10px] flex items-center justify-between transition-all"
                                 >
                                   <span>🔽 کف ۲۴h:</span>
-                                  <span className="font-mono font-black">{meta.unit === '$' ? `$${l24.toFixed(2)}` : `${l24.toFixed(2)}${meta.unit}`}</span>
+                                  <span className="font-mono font-black">{isTmn ? `${l24.toLocaleString('fa-IR')} تومان` : (meta.unit === '$' ? `$${l24.toFixed(2)}` : `${l24.toFixed(2)}${meta.unit}`)}</span>
                                 </button>
                               </div>
                             </div>
@@ -4135,71 +4375,110 @@ export default function App() {
                               </div>
                             </div>
 
-                            <div className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-2">
-                              <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
-                                <span>🔼 حد بالا (مقاومت / خروج سود)</span>
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Upper Price (نرخ حد بالا):</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={upperPriceStr}
-                                  onChange={(e) => setUpperPriceStr(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
-                                  placeholder="4.00"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Upper Note (یادداشت حد بالا):</label>
-                                <input
-                                  type="text"
-                                  value={upperNote}
-                                  onChange={(e) => setUpperNote(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
-                                  placeholder="«رسید به مقاومت، بررسی کن»"
-                                />
-                              </div>
-                            </div>
+                            {(() => {
+                              const meta = macroPrices[selectedMacroKey] || macroPrices.US10Y;
+                              const isTmn = meta.unit === 'ت' || meta.category === 'iran_market';
+                              const curP = meta.currentPrice;
+                              return (
+                                <>
+                                  <div className="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-2">
+                                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
+                                      <span>🔼 حد بالا (مقاومت / خروج سود)</span>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">
+                                        {isTmn ? 'نرخ حد بالا (تومان):' : 'Upper Price (نرخ حد بالا):'}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        step={isTmn ? "1" : "0.01"}
+                                        value={upperPriceStr}
+                                        onChange={(e) => setUpperPriceStr(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
+                                        placeholder={isTmn ? `مثال: ${Math.round(curP * 1.015)}` : "4.00"}
+                                      />
+                                      {isTmn && upperPriceStr && (
+                                        <div className="text-[10px] text-emerald-400 font-mono mt-0.5 font-semibold">
+                                          معادل: {Math.round(parseFloat(upperPriceStr) || 0).toLocaleString('fa-IR')} تومان
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">Upper Note (یادداشت حد بالا):</label>
+                                      <input
+                                        type="text"
+                                        value={upperNote}
+                                        onChange={(e) => setUpperNote(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
+                                        placeholder="«رسید به مقاومت، بررسی کن»"
+                                      />
+                                    </div>
+                                  </div>
 
-                            <div className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2">
-                              <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs">
-                                <span>🔽 حد پایین (حمایت / حد ضرر)</span>
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Lower Price (نرخ حد پایین):</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={lowerPriceStr}
-                                  onChange={(e) => setLowerPriceStr(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
-                                  placeholder="2.00"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 mb-0.5">Lower Note (یادداشت حد پایین):</label>
-                                <input
-                                  type="text"
-                                  value={lowerNote}
-                                  onChange={(e) => setLowerNote(e.target.value)}
-                                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
-                                  placeholder="«حمایت شکست، بفروش»"
-                                />
-                              </div>
-                            </div>
+                                  <div className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2">
+                                    <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs">
+                                      <span>🔽 حد پایین (حمایت / حد ضرر)</span>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">
+                                        {isTmn ? 'نرخ حد پایین (تومان):' : 'Lower Price (نرخ حد پایین):'}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        step={isTmn ? "1" : "0.01"}
+                                        value={lowerPriceStr}
+                                        onChange={(e) => setLowerPriceStr(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
+                                        placeholder={isTmn ? `مثال: ${Math.round(curP * 0.985)}` : "2.00"}
+                                      />
+                                      {isTmn && lowerPriceStr && (
+                                        <div className="text-[10px] text-rose-400 font-mono mt-0.5 font-semibold">
+                                          معادل: {Math.round(parseFloat(lowerPriceStr) || 0).toLocaleString('fa-IR')} تومان
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] text-slate-400 mb-0.5">Lower Note (یادداشت حد پایین):</label>
+                                      <input
+                                        type="text"
+                                        value={lowerNote}
+                                        onChange={(e) => setLowerNote(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs"
+                                        placeholder="«حمایت شکست، بفروش»"
+                                      />
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <div>
-                            <label className="block text-slate-400 mb-1">نرخ هدف:</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={targetValueStr}
-                              onChange={(e) => setTargetValueStr(e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold"
-                              placeholder="مثال: 4.50"
-                            />
+                            {(() => {
+                              const meta = macroPrices[selectedMacroKey] || macroPrices.US10Y;
+                              const isTmn = meta.unit === 'ت' || meta.category === 'iran_market';
+                              const curP = meta.currentPrice;
+                              return (
+                                <>
+                                  <label className="block text-slate-400 mb-1">
+                                    {isTmn ? 'قیمت هدف (تومان):' : 'نرخ هدف:'}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step={isTmn ? "1" : "0.01"}
+                                    value={targetValueStr}
+                                    onChange={(e) => setTargetValueStr(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold"
+                                    placeholder={isTmn ? `مثال: ${Math.round(curP)}` : "مثال: 4.50"}
+                                  />
+                                  {isTmn && targetValueStr && (
+                                    <div className="text-[10px] text-emerald-400 font-mono mt-1 font-semibold">
+                                      معادل: {Math.round(parseFloat(targetValueStr) || 0).toLocaleString('fa-IR')} تومان
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -4451,7 +4730,7 @@ export default function App() {
                           {rule.ttsEnabled && <Volume2 className="h-3 w-3 text-violet-400" />}
                         </div>
                         {(() => {
-                          const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                          const isTmnRule = isTomanRule(rule);
                           return (
                             <div className="text-[10px] text-slate-400 flex items-center gap-1">
                               <span>هدف: {rule.conditionType === 'PRICE_THRESHOLD' ? (isTmnRule ? `${Math.round(rule.targetValue).toLocaleString('fa-IR')} تومان` : `$${rule.targetValue}`) : `${rule.targetValue}%`}</span>
@@ -4466,7 +4745,7 @@ export default function App() {
 
                       <div className="text-right">
                         {(() => {
-                          const isTmnRule = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT' || rule.exchangeId?.toLowerCase() === 'nobitex';
+                          const isTmnRule = isTomanRule(rule);
                           return (
                             <span className="font-mono font-bold text-white block">
                               {isTmnRule ? `${Math.round(currentPrice).toLocaleString('fa-IR')} تومان` : `$${currentPrice.toLocaleString()}`}

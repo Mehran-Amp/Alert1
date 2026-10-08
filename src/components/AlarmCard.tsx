@@ -50,7 +50,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   let displayName = rule.marketSymbol;
   const resolveUnit = (curr: string) => {
     const c = (curr || '').toUpperCase().trim();
-    if (c === 'TMN' || c === 'IRT' || c === 'TOMAN' || curr === 'تومان' || curr === 'ت' || (rule.exchangeId && rule.exchangeId.toLowerCase() === 'nobitex' && (c === 'TMN' || c === 'IRT' || !curr))) {
+    if (c === 'TMN' || c === 'IRT' || c === 'TOMAN' || curr === 'تومان' || curr === 'ت' || (rule.exchangeId && (rule.exchangeId.toLowerCase().includes('nobitex') || rule.exchangeId.toLowerCase().includes('bonbast')))) {
       return 'تومان';
     }
     if (c === 'IRR' || c === 'RLS' || curr === 'ریال') {
