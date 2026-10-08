@@ -11,11 +11,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Code,
   Coins,
   Copy,
   Database,
   Download,
   ExternalLink,
+  FileJson,
   Flame,
   Globe,
   Languages,
@@ -731,6 +733,54 @@ export default function App() {
   const [ruleVibrationEnabled, setRuleVibrationEnabled] = useState<boolean>(true);
   const [ttsEnabled, setTtsEnabled] = useState<boolean>(true);
   const [showHomeWidgetModal, setShowHomeWidgetModal] = useState<boolean>(false);
+  const [showDebugJsonViewer, setShowDebugJsonViewer] = useState<boolean>(false);
+  const [debugJsonSearchQuery, setDebugJsonSearchQuery] = useState<string>('');
+
+  const getWallStreetMacroJson = () => {
+    return Object.entries(macroPrices).map(([key, asset]) => ({
+      id: key,
+      symbol: asset.symbol,
+      nameEn: asset.name,
+      nameFa: asset.nameFa,
+      category: asset.category,
+      marketName: asset.marketName,
+      currentPrice: asset.currentPrice,
+      unit: asset.unit,
+      change24h: asset.change24h,
+      icon: asset.icon
+    }));
+  };
+
+  const handleDownloadMacroJson = () => {
+    const dataList = getWallStreetMacroJson();
+    const exportData = {
+      title: "Alarmer Wall Street & Macroeconomics Symbols Export",
+      exportedAt: new Date().toISOString(),
+      totalSymbols: dataList.length,
+      symbols: dataList
+    };
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wallstreet_macro_symbols_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(currentLang === 'fa' ? '📥 فایل لیست نمادهای وال استریت و اقتصاد کلان (JSON) دانلود شد.' : '📥 Downloaded Wall Street & Macro JSON file.');
+  };
+
+  const handleCopyMacroJson = () => {
+    const dataList = getWallStreetMacroJson();
+    const jsonStr = JSON.stringify(dataList, null, 2);
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      showToast(currentLang === 'fa' ? '📋 کد JSON تمامی نمادها در حافظه کپی شد.' : '📋 Copied symbols JSON to clipboard.');
+    }).catch(() => {
+      showToast('خطا در کپی کدهای JSON');
+    });
+  };
 
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([
@@ -2931,6 +2981,103 @@ export default function App() {
                               <Zap className="h-3.5 w-3.5" />
                               <span>{tAuthTg.adminTestTelegramBtn}</span>
                             </button>
+                          </div>
+
+                          {/* WALL STREET & MACRO SYMBOLS JSON EXPORT */}
+                          <div className="mt-3 pt-3 border-t border-rose-500/20 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <Code className="h-3.5 w-3.5 text-amber-400" />
+                                <span className="font-bold text-[11px] text-rose-200">
+                                  {currentLang === 'fa' ? 'خروجی JSON نمادهای وال استریت و اقتصاد کلان' : 'Wall Street & Macro Symbols JSON Export'}
+                                </span>
+                              </div>
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono font-bold border border-amber-500/30">
+                                {Object.keys(macroPrices).length} {currentLang === 'fa' ? 'نماد' : 'Symbols'}
+                              </span>
+                            </div>
+
+                            <p className="text-[10px] text-slate-400 leading-relaxed">
+                              {currentLang === 'fa' 
+                                ? 'دریافت خروجی کامل .json از تمامی نمادهای موجود در بخش وال استریت، سهام آمریکا، اوراق قرضه، فارکس، طلا، نفت، شاخص‌ها و بازار آزاد ایران (بن‌بست):' 
+                                : 'Export complete JSON of all active symbols across Wall Street, US Stocks, Bonds, Forex, Commodities, Indices, and Iran Free Market:'}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={handleDownloadMacroJson}
+                                className="py-2 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-[11px] border border-amber-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                              >
+                                <Download className="h-3.5 w-3.5 text-amber-400" />
+                                <span>{currentLang === 'fa' ? 'دانلود فایل .json' : 'Download .json File'}</span>
+                              </button>
+
+                              <button
+                                onClick={handleCopyMacroJson}
+                                className="py-2 px-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-[11px] border border-slate-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                              >
+                                <Copy className="h-3.5 w-3.5 text-slate-400" />
+                                <span>{currentLang === 'fa' ? 'کپی کد JSON' : 'Copy JSON'}</span>
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => setShowDebugJsonViewer(!showDebugJsonViewer)}
+                              className="w-full py-1.5 px-2 rounded-lg bg-slate-950/80 hover:bg-slate-950 text-slate-400 hover:text-slate-200 font-mono text-[10px] border border-slate-800 flex items-center justify-between transition-colors cursor-pointer"
+                            >
+                              <span className="flex items-center gap-1">
+                                <span>{showDebugJsonViewer ? '▼' : '►'}</span>
+                                <span>{currentLang === 'fa' ? 'پیش‌نمایش آنلاین خروجی JSON' : 'Interactive JSON Live Preview'}</span>
+                              </span>
+                              <span className="text-[9px] text-amber-400/80 font-mono">
+                                {showDebugJsonViewer ? (currentLang === 'fa' ? 'بستن' : 'Close') : (currentLang === 'fa' ? 'نمایش' : 'View')}
+                              </span>
+                            </button>
+
+                            {showDebugJsonViewer && (
+                              <div className="space-y-2 p-2.5 rounded-xl bg-slate-950 border border-amber-500/30 transition-all">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="relative flex-1">
+                                    <Search className="absolute right-2.5 top-2 h-3 w-3 text-slate-500" />
+                                    <input
+                                      type="text"
+                                      value={debugJsonSearchQuery}
+                                      onChange={(e) => setDebugJsonSearchQuery(e.target.value)}
+                                      placeholder={currentLang === 'fa' ? 'جستجو در نمادها (مثال: NVDA, GOLD, USD)...' : 'Search symbols...'}
+                                      className="w-full pl-2 pr-7 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[10px] text-slate-200 focus:outline-none focus:border-amber-500"
+                                      dir={currentLang === 'fa' ? 'rtl' : 'ltr'}
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={handleCopyMacroJson}
+                                    title={currentLang === 'fa' ? 'کپی سریع' : 'Quick Copy'}
+                                    className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition-colors"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+
+                                <div className="max-h-60 overflow-y-auto p-2 bg-slate-900/90 rounded-lg text-[10px] font-mono text-emerald-300 border border-slate-800/80 leading-relaxed text-left selection:bg-emerald-900 selection:text-emerald-100">
+                                  <pre className="whitespace-pre-wrap break-all dir-ltr">
+                                    {JSON.stringify(
+                                      getWallStreetMacroJson().filter((item) => {
+                                        if (!debugJsonSearchQuery.trim()) return true;
+                                        const q = debugJsonSearchQuery.toLowerCase();
+                                        return (
+                                          item.id.toLowerCase().includes(q) ||
+                                          item.symbol.toLowerCase().includes(q) ||
+                                          item.nameEn.toLowerCase().includes(q) ||
+                                          item.nameFa.toLowerCase().includes(q) ||
+                                          item.category.toLowerCase().includes(q)
+                                        );
+                                      }),
+                                      null,
+                                      2
+                                    )}
+                                  </pre>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
