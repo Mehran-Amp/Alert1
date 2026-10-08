@@ -1120,7 +1120,7 @@ class IranDomesticExchange implements Exchange {
         final url = Uri.parse('https://apiv2.nobitex.ir/market/stats');
         final res = await _client.get(url).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
-          final data = json.decode(res.body);
+          final data = json.decode(utf8.decode(res.bodyBytes));
           final stats = data['stats']?[pairKey] ?? data['stats']?[isGold ? 'pm-rls' : 'usdt-rls'];
           if (stats != null && stats['latest'] != null) {
             var p = double.tryParse(stats['latest'].toString()) ?? 0.0;
@@ -1150,7 +1150,7 @@ class IranDomesticExchange implements Exchange {
         final url = Uri.parse('https://api.tetherland.com/currencies');
         final res = await _client.get(url).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
-          final data = json.decode(res.body);
+          final data = json.decode(utf8.decode(res.bodyBytes));
           final pStr = data['data']?['currencies']?['USDT']?['price'] ?? data['data']?['currencies']?['USDT']?['last_price'];
           if (pStr != null) {
             final p = double.tryParse(pStr.toString()) ?? 0.0;
@@ -1179,7 +1179,7 @@ class IranDomesticExchange implements Exchange {
         final url = Uri.parse('https://api.wallex.ir/v1/markets');
         final res = await _client.get(url).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
-          final data = json.decode(res.body);
+          final data = json.decode(utf8.decode(res.bodyBytes));
           final symKey = sym == 'GOLD_WALLEX' ? 'PAXGTMN' : 'USDTTMN';
           final stats = data['result']?['symbols']?[symKey]?['stats'];
           if (stats != null && stats['lastPrice'] != null) {

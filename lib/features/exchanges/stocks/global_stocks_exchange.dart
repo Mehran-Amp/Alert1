@@ -1874,7 +1874,7 @@ class GlobalStocksExchange implements Exchange {
               .get(Uri.parse('https://api.coingecko.com/api/v3/global'))
               .timeout(const Duration(seconds: 5));
           if (res.statusCode == 200) {
-            final body = jsonDecode(res.body);
+            final body = jsonDecode(utf8.decode(res.bodyBytes));
             if (body is Map && body['data'] is Map<String, dynamic>) {
               data = body['data'] as Map<String, dynamic>;
               _cachedCoinGeckoGlobalData = data;
@@ -1951,7 +1951,7 @@ class GlobalStocksExchange implements Exchange {
             .get(Uri.parse('https://api.alternative.me/fng/'))
             .timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
-          final data = jsonDecode(res.body);
+          final data = jsonDecode(utf8.decode(res.bodyBytes));
           final first = data['data']?[0];
           final valStr = first?['value'];
           final val = double.tryParse(valStr?.toString() ?? '');
@@ -1996,7 +1996,7 @@ class GlobalStocksExchange implements Exchange {
         }).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
+          final data = jsonDecode(utf8.decode(response.bodyBytes));
           final result = data['chart']?['result']?[0];
           if (result != null) {
             final meta = result['meta'] as Map<String, dynamic>? ?? {};
@@ -2064,7 +2064,7 @@ class GlobalStocksExchange implements Exchange {
         }).timeout(const Duration(seconds: 5));
 
         if (res.statusCode == 200) {
-          final lines = res.body.trim().split(RegExp(r'\r?\n'));
+          final lines = utf8.decode(res.bodyBytes).trim().split(RegExp(r'\r?\n'));
           if (lines.length >= 2) {
             final cols = lines[1].split(',');
             if (cols.length >= 7) {

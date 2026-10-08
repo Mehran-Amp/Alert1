@@ -270,7 +270,7 @@ class ServerAlertService {
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
-        final dynamic decoded = jsonDecode(response.body);
+        final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded is List && decoded.isNotEmpty) {
           JsonAlertRuleRepository? repo = repository;
           if (repo == null && context != null) {
@@ -529,7 +529,7 @@ class ServerAlertService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('✅ Alert successfully created on Python server: ${response.body}');
+        debugPrint('✅ Alert successfully created on Python server: ${utf8.decode(response.bodyBytes)}');
         return true;
       } else {
         // Fallback: Dispatch direct Telegram confirmation if server endpoint failed or was unreachable
@@ -635,7 +635,7 @@ class ServerAlertService {
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         return data.cast<Map<String, dynamic>>();
       } else {
         debugPrint('❌ Fetch user alerts failed: ${_parseErrorMessage(response)}');
@@ -674,7 +674,7 @@ class ServerAlertService {
 
       if (response.statusCode == 200) {
         _circuitBreakerUntil = null;
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map && data.containsKey('price') && data['price'] is num) {
           final p = (data['price'] as num).toDouble();
           if (p > 0) return p;
@@ -697,7 +697,7 @@ class ServerAlertService {
 
       if (response.statusCode == 200) {
         _circuitBreakerUntil = null;
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map<String, dynamic>) {
           return data;
         }
@@ -713,7 +713,7 @@ class ServerAlertService {
       final url = Uri.parse('$effectiveBaseUrl/api/markets/status');
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 6));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map<String, dynamic>) {
           return data['markets'] as Map<String, dynamic>? ?? data;
         }
@@ -729,7 +729,7 @@ class ServerAlertService {
       final url = Uri.parse('$effectiveBaseUrl/api/markets/status');
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map<String, dynamic>) {
           return data;
         }
@@ -746,7 +746,7 @@ class ServerAlertService {
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map<String, dynamic>) return data;
       }
     } catch (e) {
@@ -762,7 +762,7 @@ class ServerAlertService {
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map && data.containsKey('logs') && data['logs'] is List) {
           return (data['logs'] as List).cast<Map<String, dynamic>>();
         }
@@ -786,7 +786,7 @@ class ServerAlertService {
       );
       final response = await http.get(uri, headers: _buildHeaders()).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map<String, dynamic>) return data;
       }
       return {'success': false, 'error': _parseErrorMessage(response)};
@@ -818,10 +818,10 @@ class ServerAlertService {
           body: jsonEncode({'chat_id': cleanId}),
         ).timeout(const Duration(seconds: 8));
 
-        debugPrint('📥 [Telegram Test] Server response status: ${response.statusCode}, body: ${response.body}');
+        debugPrint('📥 [Telegram Test] Server response status: ${response.statusCode}, body: ${utf8.decode(response.bodyBytes)}');
         if (response.statusCode == 200) {
           try {
-            final data = jsonDecode(response.body);
+            final data = jsonDecode(utf8.decode(response.bodyBytes));
             if (data is Map && data['status'] == 'error') {
               final detail = data['detail'] ?? 'خطای تلگرام';
               debugPrint('⚠️ [Telegram Test] Server returned business error: $detail');
@@ -831,9 +831,9 @@ class ServerAlertService {
           debugPrint('✅ [Telegram Test] Server successfully dispatched Telegram test message.');
           return {'success': true, 'message': 'پیام تست با موفقیت توسط سرور به تلگرام ارسال شد.'};
         } else {
-          debugPrint('⚠️ [Telegram Test] Server returned error ${response.statusCode}: ${response.body}');
+          debugPrint('⚠️ [Telegram Test] Server returned error ${response.statusCode}: ${utf8.decode(response.bodyBytes)}');
           try {
-            final data = jsonDecode(response.body);
+            final data = jsonDecode(utf8.decode(response.bodyBytes));
             if (data is Map && data['detail'] != null) {
               return {'success': false, 'error': data['detail'].toString()};
             }
@@ -870,7 +870,7 @@ class ServerAlertService {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      debugPrint('📥 [Telegram Test] Direct API response status: ${response.statusCode}, body: ${response.body}');
+      debugPrint('📥 [Telegram Test] Direct API response status: ${response.statusCode}, body: ${utf8.decode(response.bodyBytes)}');
 
       if (response.statusCode == 200) {
         debugPrint('✅ [Telegram Test] Direct Telegram API call succeeded!');
@@ -923,7 +923,7 @@ class ServerAlertService {
       final url = Uri.parse('$effectiveBaseUrl/api/user/$cleanUser/telegram');
       final response = await http.get(url, headers: _buildHeaders()).timeout(const Duration(seconds: 6));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is Map<String, dynamic>) {
           return data;
         }

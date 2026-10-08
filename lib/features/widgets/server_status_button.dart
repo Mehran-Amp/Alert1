@@ -60,7 +60,7 @@ class _ServerStatusButtonState extends State<ServerStatusButton> {
         stopwatch.stop();
 
         if (res.statusCode == 200) {
-          final data = jsonDecode(res.body);
+          final data = jsonDecode(utf8.decode(res.bodyBytes));
           if (data is Map && data.containsKey('status') && data['status'] == 'online') {
             ServerAlertService.setBaseUrl(testUrlStr);
             if (mounted) {

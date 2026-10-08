@@ -30,7 +30,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import httpx
@@ -410,9 +410,13 @@ async def lifespan(app: FastAPI):
         await http_client.aclose()
     print("🛑 [SignalAlert Engine] Gracefully stopped.")
 
+class UTF8JSONResponse(JSONResponse):
+    media_type = "application/json; charset=utf-8"
+
 app = FastAPI(
     title="SignalAlert Production Engine",
     version=APP_VERSION,
+    default_response_class=UTF8JSONResponse,
     lifespan=lifespan
 )
 
