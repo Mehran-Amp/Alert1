@@ -47,6 +47,7 @@ import {
   User
 } from 'lucide-react';
 import { AlarmCard } from './components/AlarmCard';
+import { FA } from './i18n/fa';
 
 export interface AlertRule {
   uuid: string;
@@ -1922,24 +1923,24 @@ export default function App() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-2 sm:p-4 lg:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left: Interactive Phone Screen */}
-          <div className="lg:col-span-7 flex justify-center">
-            <div className={`w-full max-w-[400px] h-[800px] ${
+          <div className="lg:col-span-7 flex justify-center w-full min-w-0">
+            <div className={`w-full max-w-full sm:max-w-[400px] h-[800px] ${
               isLight 
                 ? (isPurpleBlue ? 'bg-[#f5f6ff] border-indigo-200 shadow-indigo-200/50' : 'bg-slate-50 border-slate-300') 
                 : (isPurpleBlue ? 'bg-[#0b0d1b] border-[#2e365e] shadow-purple-950/50' : 'bg-slate-950 border-slate-800')
-            } border-[8px] rounded-[48px] shadow-2xl flex flex-col overflow-hidden relative ring-1 ring-slate-700/50`}>
+            } border-4 sm:border-[8px] rounded-[36px] sm:rounded-[48px] shadow-2xl flex flex-col overflow-hidden relative ring-1 ring-slate-700/50`}>
               {/* Dynamic Island */}
               <div className={`absolute top-2 left-1/2 -translate-x-1/2 h-5 w-28 ${isLight ? 'bg-slate-300' : 'bg-slate-900'} rounded-full z-30 flex items-center justify-center`}>
                 <div className={`h-2 w-12 ${isLight ? 'bg-slate-400' : 'bg-slate-950'} rounded-full`} />
               </div>
 
               {/* Status Bar */}
-              <div className="pt-3 px-6 pb-1 flex justify-between items-center text-[10px] text-slate-400 font-mono z-20">
-                <span>12:40</span>
-                <div className="flex items-center gap-1.5">
+              <div className="pt-3 px-6 pb-1 flex justify-between items-center text-[10px] text-slate-400 font-mono z-20" dir="ltr">
+                <span dir="ltr">12:40</span>
+                <div className="flex items-center gap-1.5" dir="ltr">
                   <span className={`font-semibold text-[9px] ${accentClass}`}>40+ EXCHANGES • US BONDS</span>
                   <span className={`h-1.5 w-1.5 rounded-full ${isPurpleBlue ? 'bg-violet-400' : isOrange ? 'bg-orange-500' : 'bg-emerald-400'} animate-pulse`} />
                 </div>
@@ -1950,9 +1951,9 @@ export default function App() {
                 <div className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                   <span className="font-bold text-slate-200">Alarmer</span>
-                  <span className="text-slate-400">• ● Active</span>
+                  <span className="text-slate-400" dir="ltr">• ● Active</span>
                 </div>
-                <span className="text-[9px] text-slate-500 font-mono">Foreground</span>
+                <span className="text-[9px] text-slate-500 font-mono" dir="ltr">Foreground</span>
               </div>
 
               {/* Phone App Header */}
@@ -1963,11 +1964,13 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-sm font-bold">
-                      {mobileScreen === 'alerts' && 'هشدارهای من (پیش‌فرض)'}
-                      {mobileScreen === 'history' && 'تاریخچه اعلان‌ها'}
-                      {mobileScreen === 'settings' && 'تنظیمات برنامه'}
+                      {mobileScreen === 'alerts' && (currentLang === 'fa' ? FA.myAlertsDefault : 'My Alerts (Default)')}
+                      {mobileScreen === 'history' && (currentLang === 'fa' ? FA.notificationHistory : 'Alert History')}
+                      {mobileScreen === 'settings' && (currentLang === 'fa' ? FA.appSettings : 'App Settings')}
                     </h2>
-                    <p className="text-[10px] text-slate-400">رمزارزها • اوراق قرضه آمریکا • فارکس • سهام</p>
+                    <p className="text-[10px] text-slate-400">
+                      {currentLang === 'fa' ? FA.marketsSubtitle : 'Crypto • US Bonds • Forex • Stocks'}
+                    </p>
                   </div>
                 </div>
 
@@ -1981,7 +1984,7 @@ export default function App() {
                       className={`p-1.5 rounded-xl ${accentBgClass} text-slate-950 transition-all font-bold flex items-center gap-1.5 text-xs px-3 py-2 shadow-md cursor-pointer`}
                     >
                       <Plus className="h-4 w-4" />
-                      <span>ایجاد هشدار جدید</span>
+                      <span>{currentLang === 'fa' ? FA.addNewAlert : 'Add Alert'}</span>
                     </button>
                   </div>
                 )}
@@ -1997,9 +2000,11 @@ export default function App() {
                         <div className="h-16 w-16 mx-auto rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
                           <AlarmClock className="h-8 w-8" />
                         </div>
-                        <h3 className="text-sm font-bold">هنوز هشداری تنظیم نشده است</h3>
+                        <h3 className="text-sm font-bold">
+                          {currentLang === 'fa' ? FA.noAlertsYet : 'No Alerts Set Yet'}
+                        </h3>
                         <p className="text-slate-400 text-xs leading-relaxed">
-                          با کلیک بر روی دکمه زیر، بازار مورد نظر را انتخاب و اولین هشدار خود را بسازید.
+                          {currentLang === 'fa' ? FA.noAlertsDesc : 'Select your desired market and create your first alert.'}
                         </p>
                         <button
                           onClick={() => {
@@ -2009,7 +2014,7 @@ export default function App() {
                           className={`px-4 py-2 ${accentBgClass} text-slate-950 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 mt-2`}
                         >
                           <Plus className="h-4 w-4" />
-                          <span>ایجاد هشدار جدید</span>
+                          <span>{currentLang === 'fa' ? FA.addNewAlert : 'Create New Alert'}</span>
                         </button>
                       </div>
                     ) : (
@@ -2557,7 +2562,7 @@ export default function App() {
                   }`}
                 >
                   <Bell className="h-5 w-5" />
-                  <span className="text-[10px]">تاریخچه</span>
+                  <span className="text-[10px]">{currentLang === 'fa' ? FA.history : 'History'}</span>
                 </button>
 
                 {/* 2. Middle Tab: Alerts (Default & Floating Prominent) */}
@@ -2572,7 +2577,7 @@ export default function App() {
                   }`}>
                     <AlarmClock className="h-5 w-5" />
                   </div>
-                  <span className="text-[10px] font-bold">هشدارهای من</span>
+                  <span className="text-[10px] font-bold">{currentLang === 'fa' ? FA.myAlerts : 'My Alerts'}</span>
                 </button>
 
                 {/* 3. Right Tab: Settings */}
@@ -2583,7 +2588,7 @@ export default function App() {
                   }`}
                 >
                   <SettingsIcon className="h-5 w-5" />
-                  <span className="text-[10px]">تنظیمات</span>
+                  <span className="text-[10px]">{currentLang === 'fa' ? FA.settings : 'Settings'}</span>
                 </button>
               </div>
 

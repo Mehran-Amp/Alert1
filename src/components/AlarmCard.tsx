@@ -1,6 +1,7 @@
 import React from 'react';
 import { Volume2, Smartphone, Mic, Timer, RefreshCw, Trash2, Zap } from 'lucide-react';
 import { AlertRule, formatExchangeTag } from '../App';
+import { FA } from '../i18n/fa';
 
 export interface AlarmCardProps {
   rule: AlertRule;
@@ -21,9 +22,9 @@ export interface AlarmCardProps {
 }
 
 const defaultFormatInterval = (secs: number) => {
-  if (secs >= 3600) return `${secs / 3600} ساعت`;
-  if (secs >= 60) return `${secs / 60} دقیقه`;
-  return `${secs} ثانیه`;
+  if (secs >= 3600) return `${Math.round(secs / 3600)} ${FA.hour}`;
+  if (secs >= 60) return `${Math.round(secs / 60)} ${FA.minute}`;
+  return `${secs} ${FA.second}`;
 };
 
 export const AlarmCard: React.FC<AlarmCardProps> = ({
@@ -43,24 +44,24 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   onManualCheck,
   onDelete,
 }) => {
+  const isFa = currentLang === 'fa';
   let iconUrl = '';
-  let nameFa = rule.marketSymbol;
   let displayName = rule.marketSymbol;
   let unit = '$';
 
   if (rule.marketType === 'crypto') {
     const meta = cryptoPrices[rule.baseCurrency] || cryptoPrices.BTC;
     iconUrl = meta?.icon || '';
-    nameFa = meta?.nameFa || rule.baseCurrency;
-    displayName = currentLang === 'fa' ? nameFa : rule.baseCurrency;
+    const nameFa = meta?.nameFa || rule.baseCurrency;
+    displayName = isFa ? nameFa : rule.baseCurrency;
     const isTmn = rule.counterCurrency === 'TMN' || rule.counterCurrency === 'IRT';
-    unit = isTmn ? 'ت' : '$';
+    unit = isTmn ? FA.tomanShort : '$';
   } else {
     const meta = macroPrices[rule.baseCurrency] || macroPrices.US10Y;
     iconUrl = meta?.icon || '';
-    nameFa = meta?.nameFa || rule.baseCurrency;
-    displayName = currentLang === 'fa' ? nameFa : (meta?.name || rule.baseCurrency);
-    unit = meta?.unit === 'تومان' ? 'ت' : (meta?.unit || '$');
+    const nameFa = meta?.nameFa || rule.baseCurrency;
+    displayName = isFa ? nameFa : (meta?.name || rule.baseCurrency);
+    unit = meta?.unit === '\u062A\u0648\u0645\u0627\u0646' ? FA.tomanShort : (meta?.unit || '$');
   }
 
   const isChecking = checkingRuleId === rule.uuid;
@@ -90,7 +91,8 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
 
   return (
     <div
-      className={`p-3 rounded-2xl border transition-all shadow-sm ${
+      dir={isFa ? 'rtl' : 'ltr'}
+      className={`w-full max-w-full overflow-hidden p-3 rounded-2xl border transition-all shadow-sm ${
         isLight
           ? 'bg-white border-slate-200/90 shadow-slate-100'
           : rule.isActive
@@ -99,14 +101,14 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
       }`}
     >
       {/* Header: Icon, Symbol/Name, Live Price & Toggle */}
-      <div className="flex items-center justify-between gap-2.5 pb-2 border-b border-slate-800/50">
+      <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/50 min-w-0">
         {/* Left / Start: Icon + Title info */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <div className="relative shrink-0">
             <img
               src={iconUrl}
               alt={displayName}
-              className="h-9 w-9 rounded-xl object-cover border border-slate-700/70 p-0.5 bg-slate-950"
+              className="h-9 w-9 rounded-xl object-cover border border-slate-700/70 p-0.5 bg-slate-950 shrink-0"
               onError={(e) => {
                 (e.target as any).src =
                   'https://cdn-icons-png.flaticon.com/512/2830/2830284.png';
@@ -119,20 +121,20 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
             />
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <div className="flex items-center gap-1.5 min-w-0">
               <span
-                className="font-black text-xs text-white truncate max-w-[110px]"
+                className="font-black text-xs text-white truncate max-w-[100px] sm:max-w-[120px]"
                 title={displayName}
               >
                 {displayName}
               </span>
-              <span className="text-[10px] font-mono text-slate-400 shrink-0 font-semibold">
+              <span dir="ltr" className="text-[10px] font-mono text-slate-400 shrink-0 font-semibold">
                 {rule.marketSymbol}
               </span>
             </div>
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold tracking-wider bg-slate-800/90 text-slate-300 border border-slate-700/50 shrink-0 font-mono">
+            <div className="flex items-center gap-1 mt-0.5 min-w-0">
+              <span dir="ltr" className="px-1.5 py-0.5 rounded text-[8.5px] font-bold tracking-wider bg-slate-800/90 text-slate-300 border border-slate-700/50 shrink-0 font-mono">
                 {formatExchangeTag(rule.exchangeName)}
               </span>
             </div>
@@ -142,7 +144,7 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
         {/* Right / End: Live Price & Switch */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-right" dir="ltr">
-            <div className="text-[13px] font-black font-mono tracking-tight text-white leading-tight">
+            <div dir="ltr" className="text-[13px] font-black font-mono tracking-tight text-white leading-tight">
               {unit === '$'
                 ? `$${
                     displayP >= 1000
@@ -153,17 +155,16 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                   }`
                 : `${
                     displayP >= 1000 ? Math.round(displayP).toLocaleString() : displayP.toFixed(2)
-                  } ${
-                    unit === 'تومان' || unit === 'TMN' || unit === 'IRT' ? 'ت' : unit
-                  }`}
+                  } ${unit}`}
             </div>
-            <div className="mt-0.5">
+            <div className="mt-0.5 flex justify-end" dir="ltr">
               {rule.isTriggered ? (
-                <span className="inline-block px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                <span dir="ltr" className="inline-block px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400">
                   Done
                 </span>
               ) : (
                 <span
+                  dir="ltr"
                   className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-mono font-bold ${
                     isZero
                       ? 'bg-slate-800 text-slate-400'
@@ -180,19 +181,20 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={() => onToggle(rule.uuid)}
-            className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+            className={`w-8 h-4.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
               rule.isActive
                 ? isOrange
                   ? 'bg-orange-500'
                   : 'bg-emerald-500'
                 : 'bg-slate-800 border border-slate-700'
             }`}
-            title={rule.isActive ? 'روشن' : 'خاموش'}
+            title={rule.isActive ? FA.on : FA.off}
           >
             <div
-              className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                rule.isActive ? '-translate-x-3.5' : 'translate-x-0'
+              className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all ${
+                rule.isActive ? 'right-0.5' : 'left-0.5'
               }`}
             />
           </button>
@@ -200,25 +202,73 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
       </div>
 
       {/* Middle: Target Proximity Progress Strip */}
-      <div className="my-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800/50">
-        <div className="flex items-center justify-between text-[10.5px] mb-1.5 gap-2">
-          <div className="flex items-center gap-1 text-slate-300 min-w-0 flex-1">
+      <div className="my-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800/50 min-w-0 overflow-hidden">
+        <div className="flex items-center justify-between text-[10.5px] mb-1.5 gap-2 min-w-0">
+          <div className="flex items-center gap-1 text-slate-300 min-w-0 flex-1 overflow-hidden">
             <Zap className="h-3 w-3 text-amber-400 shrink-0" />
-            <span className="font-semibold truncate">
-              {rule.conditionType === 'PERCENT_CHANGE'
-                ? currentLang === 'fa'
-                  ? `تغییر نرخ ${rule.direction === 'BOTH' ? '±' : rule.direction === 'ABOVE' ? '+' : '-'}${rule.targetValue}%`
-                  : `Rate Change ${rule.direction === 'BOTH' ? '±' : rule.direction === 'ABOVE' ? '+' : '-'}${rule.targetValue}%`
-                : rule.direction === 'BOTH'
-                ? currentLang === 'fa'
-                  ? `بالا: ${rule.upperTargetPrice?.toLocaleString() ?? '—'} | پایین: ${rule.lowerTargetPrice?.toLocaleString() ?? '—'}`
-                  : `High: ${rule.upperTargetPrice?.toLocaleString() ?? '—'} | Low: ${rule.lowerTargetPrice?.toLocaleString() ?? '—'}`
-                : currentLang === 'fa'
-                ? `تارگت: ${rule.direction === 'ABOVE' ? 'بالای' : 'زیر'} ${rule.targetValue.toLocaleString()} ${unit}`
-                : `Target: ${rule.direction === 'ABOVE' ? 'Above' : 'Below'} ${unit}${rule.targetValue.toLocaleString()}`}
+            <span className="font-semibold truncate min-w-0">
+              {rule.conditionType === 'PERCENT_CHANGE' ? (
+                isFa ? (
+                  <span>
+                    {FA.rateChange}{' '}
+                    <span dir="ltr" className="font-mono">
+                      {rule.direction === 'BOTH' ? '±' : rule.direction === 'ABOVE' ? '+' : '-'}
+                      {rule.targetValue}%
+                    </span>
+                  </span>
+                ) : (
+                  <span>
+                    Rate Change{' '}
+                    <span dir="ltr" className="font-mono">
+                      {rule.direction === 'BOTH' ? '±' : rule.direction === 'ABOVE' ? '+' : '-'}
+                      {rule.targetValue}%
+                    </span>
+                  </span>
+                )
+              ) : rule.direction === 'BOTH' ? (
+                isFa ? (
+                  <span>
+                    {FA.high}{' '}
+                    <span dir="ltr" className="font-mono">
+                      {rule.upperTargetPrice?.toLocaleString() ?? '—'}
+                    </span>{' '}
+                    | {FA.low}{' '}
+                    <span dir="ltr" className="font-mono">
+                      {rule.lowerTargetPrice?.toLocaleString() ?? '—'}
+                    </span>
+                  </span>
+                ) : (
+                  <span>
+                    High:{' '}
+                    <span dir="ltr" className="font-mono">
+                      {rule.upperTargetPrice?.toLocaleString() ?? '—'}
+                    </span>{' '}
+                    | Low:{' '}
+                    <span dir="ltr" className="font-mono">
+                      {rule.lowerTargetPrice?.toLocaleString() ?? '—'}
+                    </span>
+                  </span>
+                )
+              ) : isFa ? (
+                <span>
+                  {FA.target} {rule.direction === 'ABOVE' ? FA.above : FA.below}{' '}
+                  <span dir="ltr" className="font-mono">
+                    {rule.targetValue.toLocaleString()}
+                  </span>{' '}
+                  {unit}
+                </span>
+              ) : (
+                <span>
+                  Target: {rule.direction === 'ABOVE' ? 'Above' : 'Below'}{' '}
+                  <span dir="ltr" className="font-mono">
+                    {unit}{rule.targetValue.toLocaleString()}
+                  </span>
+                </span>
+              )}
             </span>
           </div>
           <span
+            dir="ltr"
             className={`font-mono font-bold text-[9.5px] shrink-0 ${
               rule.isTriggered
                 ? 'text-amber-400'
@@ -226,7 +276,6 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 ? 'text-amber-400'
                 : 'text-emerald-400'
             }`}
-            dir="ltr"
           >
             {rule.isTriggered
               ? 'Done'
@@ -248,19 +297,19 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
       </div>
 
       {/* Footer: Compact Toggle Chips (Sound, Vibe, Voice) + Interval & Actions */}
-      <div className="flex items-center justify-between text-[10px] pt-1">
+      <div className="flex items-center justify-between text-[10px] pt-1 gap-1.5 flex-wrap min-w-0">
         {/* Left: Feedback Notification Badges */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0 flex-wrap">
           {/* Sound */}
           <button
             type="button"
             onClick={() => onToggleFeedback(rule.uuid, 'sound')}
             title={
               !globalSoundEnabled
-                ? 'صدای سراسری خاموش است'
+                ? FA.globalSoundDisabled
                 : (rule.soundEnabled ?? true)
-                ? 'صدای زنگ فعال است'
-                : 'صدای زنگ خاموش است'
+                ? FA.soundEnabled
+                : FA.soundDisabled
             }
             className={`h-6 px-1.5 rounded-lg flex items-center gap-1 font-mono text-[9px] transition-all cursor-pointer border ${
               !globalSoundEnabled
@@ -270,8 +319,8 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-400'
             }`}
           >
-            <Volume2 className="h-2.5 w-2.5" />
-            <span>{currentLang === 'fa' ? 'صدا' : 'Snd'}</span>
+            <Volume2 className="h-2.5 w-2.5 shrink-0" />
+            <span>{isFa ? FA.sound : 'Snd'}</span>
           </button>
 
           {/* Vibration */}
@@ -280,10 +329,10 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
             onClick={() => onToggleFeedback(rule.uuid, 'vibration')}
             title={
               !globalVibrationEnabled
-                ? 'ویبره سراسری خاموش است'
+                ? FA.globalVibeDisabled
                 : (rule.vibrationEnabled ?? true)
-                ? 'ویبره دستگاه فعال است'
-                : 'ویبره دستگاه خاموش است'
+                ? FA.vibeEnabled
+                : FA.vibeDisabled
             }
             className={`h-6 px-1.5 rounded-lg flex items-center gap-1 font-mono text-[9px] transition-all cursor-pointer border ${
               !globalVibrationEnabled
@@ -293,8 +342,8 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-400'
             }`}
           >
-            <Smartphone className="h-2.5 w-2.5" />
-            <span>{currentLang === 'fa' ? 'ویبره' : 'Vib'}</span>
+            <Smartphone className="h-2.5 w-2.5 shrink-0" />
+            <span>{isFa ? FA.vibration : 'Vib'}</span>
           </button>
 
           {/* Voice */}
@@ -303,10 +352,10 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
             onClick={() => onToggleFeedback(rule.uuid, 'tts')}
             title={
               !globalTtsEnabled
-                ? 'اعلام صوتی سراسری خاموش است'
+                ? FA.globalVoiceDisabled
                 : (rule.ttsEnabled ?? true)
-                ? 'اعلام صوتی فعال است'
-                : 'اعلام صوتی خاموش است'
+                ? FA.voiceEnabled
+                : FA.voiceDisabled
             }
             className={`h-6 px-1.5 rounded-lg flex items-center gap-1 font-mono text-[9px] transition-all cursor-pointer border ${
               !globalTtsEnabled
@@ -316,32 +365,32 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
                 : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-400'
             }`}
           >
-            <Mic className="h-2.5 w-2.5" />
-            <span>{currentLang === 'fa' ? 'صوتی' : 'TTS'}</span>
+            <Mic className="h-2.5 w-2.5 shrink-0" />
+            <span>{isFa ? FA.voice : 'TTS'}</span>
           </button>
         </div>
 
         {/* Right: Timer Interval + Refresh Check & Delete */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9.5px] font-mono text-slate-400 flex items-center gap-0.5">
-            <Timer className="h-2.5 w-2.5 text-slate-500" />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span dir="ltr" className="text-[9.5px] font-mono text-slate-400 flex items-center gap-0.5">
+            <Timer className="h-2.5 w-2.5 text-slate-500 shrink-0" />
             <span>{formatInterval(rule.checkIntervalSeconds)}</span>
           </span>
 
           <button
             onClick={() => onManualCheck(rule)}
             disabled={isChecking}
-            className="h-6 px-2 rounded-lg bg-slate-800 hover:bg-slate-700/80 text-emerald-400 flex items-center gap-1 text-[9.5px] font-bold border border-slate-700/60 transition-all cursor-pointer"
-            title={currentLang === 'fa' ? 'بررسی آنی قیمت' : 'Check Now'}
+            className="h-6 px-2 rounded-lg bg-slate-800 hover:bg-slate-700/80 text-emerald-400 flex items-center gap-1 text-[9.5px] font-bold border border-slate-700/60 transition-all cursor-pointer shrink-0"
+            title={isFa ? FA.checkNow : 'Check Now'}
           >
-            <RefreshCw className={`h-2.5 w-2.5 ${isChecking ? 'animate-spin' : ''}`} />
-            <span>{currentLang === 'fa' ? 'چک' : 'Check'}</span>
+            <RefreshCw className={`h-2.5 w-2.5 shrink-0 ${isChecking ? 'animate-spin' : ''}`} />
+            <span>{isFa ? FA.check : 'Check'}</span>
           </button>
 
           <button
             onClick={() => onDelete(rule.uuid)}
-            className="h-6 w-6 flex items-center justify-center rounded-lg hover:bg-rose-500/15 text-slate-500 hover:text-rose-400 transition-all cursor-pointer"
-            title={currentLang === 'fa' ? 'حذف هشدار' : 'Delete'}
+            className="h-6 w-6 flex items-center justify-center rounded-lg hover:bg-rose-500/15 text-slate-500 hover:text-rose-400 transition-all cursor-pointer shrink-0"
+            title={isFa ? FA.deleteAlert : 'Delete'}
           >
             <Trash2 className="h-3 w-3" />
           </button>
