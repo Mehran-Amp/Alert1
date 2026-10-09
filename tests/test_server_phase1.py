@@ -26,24 +26,29 @@ for mod_name in [
     'firebase_admin', 'firebase_admin.credentials', 'firebase_admin.messaging', 'firebase_admin.exceptions'
 ]:
     if mod_name not in sys.modules:
-        m = MagicMock()
-        if mod_name == 'fastapi':
-            class HTTPException(Exception):
-                def __init__(self, status_code=400, detail=""):
-                    super().__init__(detail)
-                    self.status_code = status_code
-                    self.detail = detail
-            m.HTTPException = HTTPException
-        elif mod_name == 'pydantic':
-            class BaseModel:
-                def __init__(self, **kwargs):
-                    for k, v in kwargs.items():
-                        setattr(self, k, v)
-                def dict(self):
-                    return self.__dict__
-            m.BaseModel = BaseModel
-            m.Field = lambda *args, **kwargs: kwargs.get('default', None)
-        sys.modules[mod_name] = m
+        try:
+            __import__(mod_name)
+        except ImportError:
+            m = MagicMock()
+            if mod_name == 'fastapi':
+                class HTTPException(Exception):
+                    def __init__(self, status_code=400, detail=""):
+                        super().__init__(detail)
+                        self.status_code = status_code
+                        self.detail = detail
+                m.HTTPException = HTTPException
+            elif mod_name == 'pydantic':
+                class BaseModel:
+                    def __init__(self, **kwargs):
+                        for k, v in kwargs.items():
+                            setattr(self, k, v)
+                    def dict(self):
+                        return self.__dict__
+                    def model_dump(self):
+                        return self.__dict__
+                m.BaseModel = BaseModel
+                m.Field = lambda *args, **kwargs: kwargs.get('default', None)
+            sys.modules[mod_name] = m
 
 from server import (
     resolve_yf_symbol,

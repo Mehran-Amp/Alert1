@@ -21,6 +21,7 @@ export interface ServerAlertResponse extends AlertPayload {
 }
 
 let BASE_URL = 'https://aisocialfeed.com';
+let API_KEY = 'e4b7a1d92f6c8035a9e2b7d4f1c6083e';
 
 export const setServerBaseUrl = (url: string) => {
   if (url) {
@@ -28,7 +29,23 @@ export const setServerBaseUrl = (url: string) => {
   }
 };
 
+export const setServerApiKey = (key: string) => {
+  if (key) {
+    API_KEY = key;
+  }
+};
+
 export const getServerBaseUrl = () => BASE_URL;
+
+const buildHeaders = (extra?: Record<string, string>) => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (API_KEY) {
+    headers['X-API-Key'] = API_KEY;
+  }
+  return { ...headers, ...extra };
+};
 
 /**
  * Convert check frequency unit value + unit into seconds
@@ -54,7 +71,7 @@ export async function createAlertOnServer(payload: AlertPayload): Promise<Server
   try {
     const res = await fetch(`${BASE_URL}/api/alerts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -74,7 +91,9 @@ export async function createAlertOnServer(payload: AlertPayload): Promise<Server
  */
 export async function fetchUserAlertsFromServer(userId: string): Promise<ServerAlertResponse[]> {
   try {
-    const res = await fetch(`${BASE_URL}/api/alerts/${userId}`);
+    const res = await fetch(`${BASE_URL}/api/alerts/${userId}`, {
+      headers: buildHeaders(),
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -89,7 +108,10 @@ export async function fetchUserAlertsFromServer(userId: string): Promise<ServerA
  */
 export async function deleteAlertFromServer(alertId: string): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/api/alerts/${alertId}`, { method: 'DELETE' });
+    const res = await fetch(`${BASE_URL}/api/alerts/${alertId}`, {
+      method: 'DELETE',
+      headers: buildHeaders(),
+    });
     return res.ok;
   } catch (err) {
     console.error('❌ Error deleting alert:', err);

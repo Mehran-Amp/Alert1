@@ -2025,6 +2025,11 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       exchangeDisplayName = '🏛️ بازارهای جهانی';
     }
 
+    final bool isMacroIndicator = _flowType == MarketFlowType.macro &&
+        (_selectedMacroAsset?['cat'] == 'Macro' ||
+         _selectedMacroAsset?['cat'] == 'CryptoMacro' ||
+         ['CPI', 'FEDFUNDS', 'US10Y', 'UNRATE', 'DX-Y.NYB'].contains(_selectedMacroAsset?['symbol']));
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -2359,73 +2364,182 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: () => setState(() => _conditionType = AlertConditionType.percentChange),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _conditionType == AlertConditionType.percentChange
-                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                        : theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _conditionType == AlertConditionType.percentChange
-                          ? theme.colorScheme.primary
-                          : theme.dividerColor,
+
+        if (isMacroIndicator) ...[
+          // Specialized Macro Indicator Condition Selector
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.25)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.query_stats_rounded, size: 16, color: theme.colorScheme.secondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      lang == 'fa' ? 'نوع شرط شاخص کلان اقتصادی:' : 'Macro Economic Alert Condition:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.secondary),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    AppStrings.get('percent_change', lang),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _conditionType = AlertConditionType.percentChange;
+                            _percentController.text = '0.01';
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: _conditionType == AlertConditionType.percentChange
+                                ? theme.colorScheme.secondary.withValues(alpha: 0.2)
+                                : theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _conditionType == AlertConditionType.percentChange
+                                  ? theme.colorScheme.secondary
+                                  : theme.dividerColor,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            AppStrings.get('macro_cond_new_value', lang),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _conditionType == AlertConditionType.percentChange
+                                  ? theme.colorScheme.secondary
+                                  : theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _conditionType = AlertConditionType.priceThreshold;
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: _conditionType == AlertConditionType.priceThreshold
+                                ? theme.colorScheme.secondary.withValues(alpha: 0.2)
+                                : theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _conditionType == AlertConditionType.priceThreshold
+                                  ? theme.colorScheme.secondary
+                                  : theme.dividerColor,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            AppStrings.get('macro_cond_threshold', lang),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _conditionType == AlertConditionType.priceThreshold
+                                  ? theme.colorScheme.secondary
+                                  : theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ] else ...[
+          // Standard Financial Price Condition Selector (Crypto, Stocks, Forex, Commodities, Iran)
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => _conditionType = AlertConditionType.percentChange),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
                       color: _conditionType == AlertConditionType.percentChange
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                          : theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _conditionType == AlertConditionType.percentChange
+                            ? theme.colorScheme.primary
+                            : theme.dividerColor,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      AppStrings.get('percent_change', lang),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: _conditionType == AlertConditionType.percentChange
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: InkWell(
-                onTap: () => setState(() => _conditionType = AlertConditionType.priceThreshold),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _conditionType == AlertConditionType.priceThreshold
-                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                        : theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => _conditionType = AlertConditionType.priceThreshold),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
                       color: _conditionType == AlertConditionType.priceThreshold
-                          ? theme.colorScheme.primary
-                          : theme.dividerColor,
+                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                          : theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _conditionType == AlertConditionType.priceThreshold
+                            ? theme.colorScheme.primary
+                            : theme.dividerColor,
+                      ),
                     ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    AppStrings.get('price_target', lang),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: _conditionType == AlertConditionType.priceThreshold
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    alignment: Alignment.center,
+                    child: Text(
+                      AppStrings.get('price_target', lang),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: _conditionType == AlertConditionType.priceThreshold
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
 
         if (_conditionType == AlertConditionType.percentChange) ...[

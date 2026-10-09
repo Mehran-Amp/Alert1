@@ -1022,6 +1022,50 @@ class _SettingsPageState extends State<SettingsPage> {
               );
             },
           ),
+          const SizedBox(height: AppTokens.space20),
+
+          // Section 9: Legal Disclaimer & Risk Warning (پیام حقوقی و سلب مسئولیت ریسک)
+          _buildSectionHeader(isFa ? '۹. پیام حقوقی و سلب مسئولیت' : '9. Legal Disclaimer & Risk Warning', theme),
+          const SizedBox(height: AppTokens.space8),
+
+          Container(
+            padding: const EdgeInsets.all(AppTokens.space16),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.gavel_rounded, color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.get('legal_disclaimer_title', lang),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppStrings.get('legal_disclaimer_text', lang),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.6,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                  ),
+                  textAlign: TextAlign.justify,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTokens.space24),
         ],
       ),
     );
