@@ -14,7 +14,7 @@ import 'fcm_notification_service.dart';
 /// ServerAlertService handles communication with the Python Alert Engine backend
 class ServerAlertService {
   // Configurable base URL for the Python server
-  static String _baseUrl = '';
+  static String _baseUrl = const String.fromEnvironment('SERVER_URL', defaultValue: 'https://aisocialfeed.com');
   static String _apiKey = const String.fromEnvironment('API_KEY', defaultValue: 'e4b7a1d92f6c8035a9e2b7d4f1c6083e');
   static bool _initialized = false;
   static DateTime? _circuitBreakerUntil;
@@ -42,7 +42,7 @@ class ServerAlertService {
         if (origin.isNotEmpty && origin != 'null') return origin;
       } catch (_) {}
     }
-    return 'http://127.0.0.1:8000';
+    return 'https://aisocialfeed.com';
   }
 
   /// Whether server calls should be attempted
