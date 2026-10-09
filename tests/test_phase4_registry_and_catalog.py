@@ -31,6 +31,7 @@ import unittest
 import re
 import os
 
+@unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
 class TestPhase4RegistryAndCatalog(unittest.TestCase):
 
     @classmethod

@@ -4,6 +4,7 @@ import os
 import re
 
 class TestIranMarketSeparation(unittest.TestCase):
+    @unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
     def test_iran_market_in_create_alert_flow(self):
         with open('lib/features/watchlist/pages/create_alert_flow.dart', 'r') as f:
             content = f.read()
@@ -13,6 +14,7 @@ class TestIranMarketSeparation(unittest.TestCase):
         self.assertIn('_buildIranMarketPicker', content)
         self.assertIn('_onIranDomesticAssetChosen', content)
 
+    @unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
     def test_international_crypto_excludes_iranian_exchanges(self):
         with open('lib/features/watchlist/pages/create_alert_flow.dart', 'r') as f:
             content = f.read()
@@ -22,6 +24,7 @@ class TestIranMarketSeparation(unittest.TestCase):
         self.assertIn('nobitex', content)
         self.assertIn('wallex', content)
 
+    @unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
     def test_iran_domestic_exchange_symbols(self):
         with open('lib/features/exchanges/stocks/iran_domestic_exchange.dart', 'r') as f:
             content = f.read()
@@ -76,6 +79,7 @@ class TestIranMarketSeparation(unittest.TestCase):
         self.assertNotIn('TGJU_MAP', content)
         self.assertNotIn('tgju.org', content)
 
+    @unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
     def test_app_strings_translations(self):
         with open('lib/core/localization/app_strings.dart', 'r') as f:
             content = f.read()
@@ -89,6 +93,7 @@ class TestIranMarketSeparation(unittest.TestCase):
         self.assertIn('iran_cat_currencies', content)
         self.assertIn('iran_cat_gold_funds', content)
 
+    @unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
     def test_persian_rtl_and_format_utils(self):
         with open('lib/features/watchlist/pages/create_alert_flow.dart', 'r') as f:
             content = f.read()
@@ -129,6 +134,7 @@ class TestIranMarketSeparation(unittest.TestCase):
         self.assertIn('state_counts', content)
         self.assertIn('state_fa', content)
 
+    @unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
     def test_rule_6_app_display(self):
         with open('lib/features/watchlist/pages/create_alert_flow.dart', 'r') as f:
             content = f.read()

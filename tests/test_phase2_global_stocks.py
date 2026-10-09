@@ -27,6 +27,7 @@ import os
 import json
 from datetime import datetime, timezone
 
+@unittest.skipIf(not os.path.isdir('lib'), "Flutter client code (lib/) not present in backend deployment")
 class TestPhase2GlobalStocks(unittest.TestCase):
 
     @classmethod
