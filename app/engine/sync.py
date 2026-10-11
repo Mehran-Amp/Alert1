@@ -37,6 +37,22 @@ class CatalogSchemaError(Exception):
     pass
 
 
+class CatalogValidationError(ValueError):
+    """Raised when catalog items fail structural, regex, or business rule validation."""
+    pass
+
+
+# -------------------------------------------------------------------------
+# VALIDATION CONSTRAINTS (Phase 4 / v3.2.0)
+# -------------------------------------------------------------------------
+SYMBOL_RE = re.compile(r'^[A-Z0-9^][A-Z0-9\.\-\=\/\_]{0,24}$', re.IGNORECASE)
+EXCHANGE_RE = re.compile(r'^[a-zA-Z0-9\_\-\s\.\&öäüéèáà]{2,40}$', re.IGNORECASE)
+VALID_ASSET_CLASSES = {'stock', 'etf', 'forex', 'index', 'commodity', 'bond', 'macro'}
+VALID_CURRENCIES = {'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'CHF', 'AUD', 'NZD', 'CNY', 'HKD', 'AED', 'IRR', 'IRT'}
+ALLOWED_PROVIDERS = {'yahoo', 'finnhub', 'twelve_data', 'fred'}
+FORBIDDEN_CATEGORIES = {'iran_market', 'crypto'}
+
+
 # -------------------------------------------------------------------------
 # 0. SINGLE-WRITER LOCK (cross-process via flock, in-process via threading.Lock)
 # -------------------------------------------------------------------------
@@ -81,10 +97,12 @@ def catalog_write_lock():
 # 1. CATALOG PERSISTENCE, VERSIONING & ROLLBACK SNAPSHOTS
 # -------------------------------------------------------------------------
 def get_initial_catalog_data() -> Dict[str, Any]:
-    """Generates initial seed catalog with catalog_version=1 from WALLSTREET_MACRO_SYMBOLS."""
+    """Generates initial seed catalog with catalog_version=1 from global symbols."""
     now_iso = datetime.now(timezone.utc).isoformat()
     symbols = []
     for s in WALLSTREET_MACRO_SYMBOLS:
+        if s.get("category") in FORBIDDEN_CATEGORIES:
+            continue
         item = dict(s)
         item["is_active"] = 1
         item["delisted_at"] = None
@@ -361,24 +379,120 @@ def normalize_catalog_item(item: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def validate_candidate_catalog(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def validate_candidate_catalog(items: List[Dict[str, Any]], strict: bool = False) -> List[Dict[str, Any]]:
     """
     Stage 3: VALIDATE
-    Rejects malformed symbols, enforces regex, and deduplicates by symbol.
+    Strictly validates candidate symbols:
+    - Enforces SYMBOL_RE ticker format
+    - Enforces EXCHANGE_RE code format
+    - Validates asset_class / category against VALID_ASSET_CLASSES
+    - Rejects isolated markets (Iran domestic & Crypto) from global catalog
+    - Validates currency against VALID_CURRENCIES
+    - Verifies provider_map (keys restricted to ALLOWED_PROVIDERS)
+    - Rejects duplicates and multi-category cross-contamination
+    If strict=True, raises CatalogValidationError on first violation.
     """
     valid: Dict[str, Dict[str, Any]] = {}
+    symbol_to_category: Dict[str, str] = {}
+
     for raw in items:
         norm = normalize_catalog_item(raw)
-        s = norm["symbol"]
-        if not s or not norm["id"]:
+        s = norm.get("symbol", "").strip()
+        sym_id = norm.get("id", "").strip()
+
+        # 1. Symbol ID & SYMBOL_RE validation
+        if not s or not sym_id:
+            msg = f"Candidate missing symbol or id: {raw}"
+            if strict:
+                raise CatalogValidationError(msg)
             continue
-        # Deduplicate, prioritizing entries with richer Persian names
-        if s not in valid:
-            valid[s] = norm
+
+        if not SYMBOL_RE.match(s):
+            msg = f"Symbol '{s}' violates SYMBOL_RE pattern."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+
+        # 2. Asset class / Category validation
+        cat = norm.get("category", "").strip().lower()
+        if not cat:
+            msg = f"Symbol '{s}' missing category/asset_class."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+
+        if cat in FORBIDDEN_CATEGORIES:
+            msg = f"Symbol '{s}' category '{cat}' belongs to an isolated market and cannot enter global catalog."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+
+        if cat not in VALID_ASSET_CLASSES:
+            msg = f"Symbol '{s}' has invalid asset_class/category '{cat}'. Allowed: {sorted(VALID_ASSET_CLASSES)}"
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+
+        # Check multi-category collision
+        s_upper = s.upper()
+        if s_upper in symbol_to_category and symbol_to_category[s_upper] != cat:
+            msg = f"Symbol '{s}' exists in multiple categories ('{symbol_to_category[s_upper]}' vs '{cat}')."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+        symbol_to_category[s_upper] = cat
+
+        # 3. Exchange validation
+        market = raw.get("exchange") if "exchange" in raw else raw.get("marketName")
+        if market is None:
+            market = norm.get("marketName", "")
+        market = str(market).strip()
+        if not market:
+            msg = f"Symbol '{s}' missing exchange/marketName."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+        if not EXCHANGE_RE.match(market):
+            msg = f"Symbol '{s}' exchange '{market}' violates EXCHANGE_RE pattern."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+
+        # 4. Currency validation
+        unit = norm.get("unit", "$").strip()
+        curr_map = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY", "FR": "CHF", "Fr": "CHF", "C$": "CAD", "A$": "AUD", "ت": "IRT", "%": "USD", "pts": "USD", "واحد": "IRR"}
+        normalized_curr = curr_map.get(unit, unit.upper())
+        if normalized_curr not in VALID_CURRENCIES:
+            msg = f"Symbol '{s}' has invalid currency '{unit}'."
+            if strict:
+                raise CatalogValidationError(msg)
+            continue
+
+        # 5. Provider Map validation (if item specifies provider_map)
+        prov_map = raw.get("provider_map")
+        if prov_map is not None:
+            if not isinstance(prov_map, dict) or len(prov_map) == 0:
+                msg = f"Symbol '{s}' provider_map must be a non-empty dictionary."
+                if strict:
+                    raise CatalogValidationError(msg)
+                continue
+            for prov in prov_map:
+                if prov not in ALLOWED_PROVIDERS:
+                    msg = f"Symbol '{s}' references unapproved provider '{prov}'. Allowed: {sorted(ALLOWED_PROVIDERS)}"
+                    if strict:
+                        raise CatalogValidationError(msg)
+                    continue
+
+        # 6. Deduplication, prioritizing richer Persian descriptions
+        if s_upper not in valid:
+            valid[s_upper] = norm
         else:
-            existing = valid[s]
+            if strict:
+                raise CatalogValidationError(f"Duplicate symbol '{s}' detected in candidate catalog.")
+            existing = valid[s_upper]
             if len(norm.get("nameFa", "")) > len(existing.get("nameFa", "")):
-                valid[s] = norm
+                valid[s_upper] = norm
+
     return list(valid.values())
 
 
