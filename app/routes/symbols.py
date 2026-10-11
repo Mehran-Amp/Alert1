@@ -5,12 +5,13 @@ from app.engine.sync import load_catalog, get_catalog_delta
 from app.engine.calendar import get_symbol_market_detail
 from app.engine.checker import get_cached_price
 from app.state import PRICE_CACHE
+from app.security import API_DEP, ADMIN_DEP
 
 router = APIRouter()
 
-@router.get("/api/symbols/catalog")
-@router.get("/api/symbols/wallstreet-macro")
-@router.get("/api/debug/symbols/macro")
+@router.get("/api/symbols/catalog", dependencies=API_DEP)
+@router.get("/api/symbols/wallstreet-macro", dependencies=API_DEP)
+@router.get("/api/debug/symbols/macro", dependencies=ADMIN_DEP)
 def get_debug_wallstreet_macro_symbols(since_version: Optional[int] = Query(None)):
     cat = load_catalog()
     if since_version is not None and since_version > 0:
@@ -37,8 +38,8 @@ def get_debug_wallstreet_macro_symbols(since_version: Optional[int] = Query(None
     }
 
 
-@router.get("/api/symbols/detail")
-@router.get("/api/symbols/{symbol}/detail")
+@router.get("/api/symbols/detail", dependencies=API_DEP)
+@router.get("/api/symbols/{symbol}/detail", dependencies=API_DEP)
 def get_symbol_detail(symbol: Optional[str] = None, exchange: Optional[str] = "global_stocks"):
     """
     Returns rich symbol details including market status, opening hours, schedule,
