@@ -21,7 +21,7 @@ export interface ServerAlertResponse extends AlertPayload {
 }
 
 let BASE_URL = 'https://aisocialfeed.com';
-let API_KEY = 'e4b7a1d92f6c8035a9e2b7d4f1c6083e';
+let API_KEY = '';
 
 export const setServerBaseUrl = (url: string) => {
   if (url) {

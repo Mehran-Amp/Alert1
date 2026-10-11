@@ -15,7 +15,7 @@ import 'fcm_notification_service.dart';
 class ServerAlertService {
   // Configurable base URL for the Python server
   static String _baseUrl = const String.fromEnvironment('SERVER_URL', defaultValue: 'https://aisocialfeed.com');
-  static String _apiKey = const String.fromEnvironment('API_KEY', defaultValue: 'e4b7a1d92f6c8035a9e2b7d4f1c6083e');
+  static String _apiKey = const String.fromEnvironment('API_KEY');
   static bool _initialized = false;
   static DateTime? _circuitBreakerUntil;
 
@@ -532,100 +532,12 @@ class ServerAlertService {
         debugPrint('✅ Alert successfully created on Python server: ${utf8.decode(response.bodyBytes)}');
         return true;
       } else {
-        // Fallback: Dispatch direct Telegram confirmation if server endpoint failed or was unreachable
-        if (telegramChatId != null && telegramChatId.isNotEmpty) {
-          _dispatchDirectTelegramConfirmation(
-            chatId: telegramChatId,
-            symbol: symbol,
-            exchange: exchange,
-            targetPrice: targetPrice,
-            condition: condition,
-            conditionType: conditionType,
-            percent: percent,
-            checkIntervalSeconds: checkIntervalSeconds,
-            soundEnabled: soundEnabled,
-            vibrationEnabled: vibrationEnabled,
-            ttsEnabled: ttsEnabled,
-            triggerMode: triggerMode,
-            note: note ?? upperNote ?? lowerNote,
-          ).ignore();
-        }
         debugPrint('❌ Failed to create alert on server: ${_parseErrorMessage(response)}');
       }
     } catch (e) {
       debugPrint('❌ Error connecting to Python Alert Server: $e');
     }
     return false;
-  }
-
-  /// Direct fallback to send sleek Telegram registration confirmation
-  static Future<void> _dispatchDirectTelegramConfirmation({
-    required String chatId,
-    required String symbol,
-    required String exchange,
-    required double targetPrice,
-    required String condition,
-    String? conditionType,
-    double? percent,
-    required int checkIntervalSeconds,
-    required bool soundEnabled,
-    required bool vibrationEnabled,
-    required bool ttsEnabled,
-    required String triggerMode,
-    String? note,
-  }) async {
-    const defaultBotToken = '8597547058:AAFNRkiAnCU3NLdTgRs_Oz4p8GKkV-fR7jg';
-    try {
-      var displaySymbol = symbol;
-      if (!displaySymbol.contains('/') && displaySymbol.length > 3) {
-        for (final q in ['USDT', 'USDC', 'BUSD', 'FDUSD', 'EUR', 'USD', 'TMN', 'IRT', 'BTC', 'ETH']) {
-          if (displaySymbol.endsWith(q) && displaySymbol.length > q.length) {
-            displaySymbol = '${displaySymbol.substring(0, displaySymbol.length - q.length)}/$q';
-            break;
-          }
-        }
-      }
-
-      final condArrow = condition.toUpperCase() == 'ABOVE' ? '▲' : (condition.toUpperCase() == 'BOTHSIDES' ? '⇅' : '▼');
-      final targetRepr = (conditionType == 'percentChange' && percent != null)
-          ? '${percent.toStringAsFixed(percent.truncateToDouble() == percent ? 0 : 2)}%'
-          : (targetPrice < 1 ? targetPrice.toString() : targetPrice.toStringAsFixed(2));
-
-      final intMins = checkIntervalSeconds ~/ 60;
-      final intervalStr = checkIntervalSeconds % 60 == 0 ? '⏱️ ${intMins}m' : '⏱️ ${checkIntervalSeconds}s';
-
-      final features = <String>[intervalStr];
-      if (soundEnabled) features.add('🔊');
-      if (vibrationEnabled) features.add('📳');
-      if (ttsEnabled) features.add('🗣️');
-      if (triggerMode == 'recurring') features.add('🔄');
-
-      final lines = [
-        '✅ <b>$displaySymbol</b> <code>$targetRepr</code> $condArrow',
-        '🏛️ $exchange | ${features.join(" ")}',
-      ];
-      if (note != null && note.trim().isNotEmpty) {
-        var cleanNote = note.trim();
-        if (cleanNote.startsWith('📝')) cleanNote = cleanNote.substring(1).trim();
-        if (cleanNote.isNotEmpty) lines.add('📝 $cleanNote');
-      }
-
-      final msg = lines.join('\n');
-      final url = Uri.parse('https://api.telegram.org/bot$defaultBotToken/sendMessage');
-      await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'chat_id': chatId.trim(),
-          'text': msg,
-          'parse_mode': 'HTML',
-          'disable_web_page_preview': true,
-        }),
-      ).timeout(const Duration(seconds: 6));
-      debugPrint('🤖 [Telegram Direct Confirmation] Sent for $symbol to chat $chatId');
-    } catch (e) {
-      debugPrint('⚠️ [Telegram Direct Confirmation Error] $e');
-    }
   }
 
   /// Fetch all active alerts for a user from the Python server
@@ -798,7 +710,6 @@ class ServerAlertService {
 
   /// Dispatches a real test message to verify the user's Telegram Chat ID connection
   static Future<Map<String, dynamic>> sendTelegramTestAlert(String chatId) async {
-    const defaultBotToken = '8597547058:AAFNRkiAnCU3NLdTgRs_Oz4p8GKkV-fR7jg';
     final cleanId = chatId.trim();
     if (cleanId.isEmpty) {
       debugPrint('⚠️ [Telegram Test] Chat ID is empty, aborted.');
@@ -843,51 +754,10 @@ class ServerAlertService {
         debugPrint('⚠️ [Telegram Test] Python Server dispatch failed/timeout: $e');
       }
     } else {
-      debugPrint('ℹ️ [Telegram Test] Server unavailable or circuit breaker active, using direct Telegram API.');
+      debugPrint('ℹ️ [Telegram Test] Server unavailable or circuit breaker active.');
     }
 
-    // 2. Direct Telegram Bot API fallback
-    try {
-      debugPrint('📡 [Telegram Test] Attempting direct Telegram Bot API fallback...');
-      final nowUtc = DateTime.now().toUtc();
-      final timeStr = '${nowUtc.year}-${nowUtc.month.toString().padLeft(2, '0')}-${nowUtc.day.toString().padLeft(2, '0')} ${nowUtc.hour.toString().padLeft(2, '0')}:${nowUtc.minute.toString().padLeft(2, '0')}:${nowUtc.second.toString().padLeft(2, '0')} UTC';
-      final url = Uri.parse('https://api.telegram.org/bot$defaultBotToken/sendMessage');
-      final testMsg = '🚨 <b>هشدار فعال شد:</b>\n'
-          '📊🟢 <b>^TNX/USD \$5.31 ▲3.12%</b>\n'
-          '🎯 <b>قیمت تارگت:</b> \$5.90\n'
-          '🏛️ Global Stocks\n'
-          '🕒 <b>زمان:</b> <code>$timeStr</code>\n'
-          '⚡ <i>ارسال شده توسط ربات هوشمند SignalAlert Enterprise</i>';
-
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'chat_id': cleanId,
-          'text': testMsg,
-          'parse_mode': 'HTML',
-          'disable_web_page_preview': true,
-        }),
-      ).timeout(const Duration(seconds: 10));
-
-      debugPrint('📥 [Telegram Test] Direct API response status: ${response.statusCode}, body: ${utf8.decode(response.bodyBytes)}');
-
-      if (response.statusCode == 200) {
-        debugPrint('✅ [Telegram Test] Direct Telegram API call succeeded!');
-        return {'success': true, 'message': 'پیام تست مستقیماً به تلگرام شما ارسال شد.'};
-      } else {
-        final errText = 'کد وضعیت: ${response.statusCode} - چت آیدی نامعتبر است یا ربات استارت نشده است.';
-        debugPrint('❌ [Telegram Test] Direct API failed: $errText');
-        return {'success': false, 'error': errText};
-      }
-    } catch (e) {
-      final isTimeout = e.toString().contains('TimeoutException');
-      final errDetail = isTimeout
-          ? 'تایم‌اوت ارتباط با تلگرام و سرور (لطفاً اتصال اینترنت، فیلترشکن یا سرور را بررسی فرمایید).'
-          : 'خطای ارتباطی: $e';
-      debugPrint('❌ [Telegram Test] Direct API exception: $e');
-      return {'success': false, 'error': errDetail};
-    }
+    return {'success': false, 'error': 'سرور در دسترس نیست؛ لطفاً بعداً دوباره تلاش کنید.'};
   }
 
   /// Persist user's Telegram Chat ID and connection state on the server

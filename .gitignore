@@ -22,3 +22,18 @@ serviceAccountKey.json
 *.key
 .last_fcm_token
 alerts_data.json
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+
+# Runtime data
+user_profiles.json
+fcm_outbox.json
+catalog.db
+backups/
+*.tar.gz
+tmp/
