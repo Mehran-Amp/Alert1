@@ -15,7 +15,7 @@ class PriceSnapshot extends Equatable {
   /// Explicit quote/currency unit: e.g. 'USD', '%', 'pts', 'EUR', 'CNY'
   final String? quoteUnit;
 
-  /// Originating price provider or upstream exchange: e.g. 'YahooFinance', 'Stooq', 'CoinGecko'
+  /// Originating price provider or upstream exchange: e.g. 'YahooFinance', 'CoinGecko'
   final String? source;
 
   const PriceSnapshot({
