@@ -8,7 +8,7 @@ Phase 6 Comprehensive Unit Tests:
     - Status categories: HEALTHY, SLOW, BLOCKED_OR_ERROR, SUSPICIOUS_PRICE
     - Supports JSON and HTML responses
  2. Asian Indices Coverage (^N225, ^NSEI, ^KS11):
-    - ^NSEI added to predefinedStocks in global_stocks_exchange.dart
+    - (Phase 3) app no longer hard-codes indices; they come from the server catalog
     - NIKKEI, NIFTY, KOSPI mapped in EXACT_YF_MAP in server.py
  3. DEX Resolution Support:
     - DexScreener and GeckoTerminal supported in server.py fetch_price_with_trace
@@ -49,9 +49,8 @@ class TestPhase6ProbeAndObservability(unittest.TestCase):
     def test_03_asian_indices_support(self):
         """Verify ^N225, ^NSEI, ^KS11 in stocks exchange and EXACT_YF_MAP"""
         if self.stocks_code is not None:
-            self.assertIn("'^N225'", self.stocks_code)
-            self.assertIn("'^NSEI'", self.stocks_code)
-            self.assertIn("'^KS11'", self.stocks_code)
+            # Phase 3: indices are no longer hard-coded in the app; they come from the server catalog.
+            self.assertNotIn("'symbol': '^N225'", self.stocks_code)
 
         self.assertIn("'NIKKEI': '^N225'", self.server_code)
         self.assertIn("'NIFTY': '^NSEI'", self.server_code)

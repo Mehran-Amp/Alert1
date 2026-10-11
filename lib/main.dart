@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'app/navigation/app_shell.dart';
 import 'core/localization/app_strings.dart';
+import 'core/services/catalog_sync_service.dart';
 import 'core/services/fcm_notification_service.dart';
 import 'core/services/native_widget_sync_service.dart';
 import 'core/services/server_alert_service.dart';
@@ -39,6 +40,7 @@ void main() async {
   final settingsService = SettingsService(dir.path);
   await settingsService.load();
   await ServerAlertService.initialize();
+  await CatalogSyncService.instance.initialize(); // symbol catalog: disk cache + background delta sync
 
   // Wire token rotation callback BEFORE initialization so any new token is synced immediately to server
   FCMNotificationService.onTokenChanged = (newToken) {

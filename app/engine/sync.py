@@ -3,12 +3,14 @@ import json
 import time
 import re
 import asyncio
+import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
 
 from app.config import (
     DATA_DIR, CATALOG_FILE, CATALOG_SNAPSHOTS_DIR,
-    APP_VERSION, SYMBOL_RE
+    APP_VERSION, SYMBOL_RE, CATALOG_SCHEMA_VERSION
 )
 from app.state import METRICS
 from app.markets.global_stocks import (
@@ -25,6 +27,56 @@ class CatalogSafetyCeilingExceededError(Exception):
     pass
 
 
+class CatalogLockedError(Exception):
+    """Raised when another writer holds the catalog lock or changed the catalog meanwhile."""
+    pass
+
+
+class CatalogSchemaError(Exception):
+    """Raised when catalog.json was written by a newer schema than this code understands."""
+    pass
+
+
+# -------------------------------------------------------------------------
+# 0. SINGLE-WRITER LOCK (cross-process via flock, in-process via threading.Lock)
+# -------------------------------------------------------------------------
+try:
+    import fcntl  # POSIX only; the production server (Linux) always has it
+except ImportError:  # pragma: no cover - Windows dev machines
+    fcntl = None
+
+_CATALOG_THREAD_LOCK = threading.Lock()
+
+
+@contextmanager
+def catalog_write_lock():
+    """
+    Exclusive, NON-blocking write lock on <catalog.json>.lock.
+    A second writer (another worker/process or an overlapping job) gets CatalogLockedError immediately
+    instead of waiting, so the event loop is never blocked and two syncs can never interleave.
+    """
+    if not _CATALOG_THREAD_LOCK.acquire(blocking=False):
+        raise CatalogLockedError("Catalog write lock is held by another thread.")
+    fd = None
+    try:
+        if fcntl is not None:
+            lock_path = f"{CATALOG_FILE}.lock"
+            os.makedirs(os.path.dirname(os.path.abspath(lock_path)), exist_ok=True)
+            fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                raise CatalogLockedError("Catalog write lock is held by another process.")
+        yield
+    finally:
+        if fd is not None:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            finally:
+                os.close(fd)
+        _CATALOG_THREAD_LOCK.release()
+
+
 # -------------------------------------------------------------------------
 # 1. CATALOG PERSISTENCE, VERSIONING & ROLLBACK SNAPSHOTS
 # -------------------------------------------------------------------------
@@ -39,6 +91,7 @@ def get_initial_catalog_data() -> Dict[str, Any]:
         item["added_at"] = now_iso
         symbols.append(item)
     return {
+        "schema_version": CATALOG_SCHEMA_VERSION,
         "catalog_version": 1,
         "app_version": APP_VERSION,
         "last_sync_at": now_iso,
@@ -55,7 +108,15 @@ def load_catalog() -> Dict[str, Any]:
             with open(CATALOG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict) and "symbols" in data and "catalog_version" in data:
+                    file_schema = data.get("schema_version", 1)  # files written before v3.1.0 have no field
+                    if isinstance(file_schema, int) and file_schema > CATALOG_SCHEMA_VERSION:
+                        raise CatalogSchemaError(
+                            f"{CATALOG_FILE} has schema_version {file_schema} > supported {CATALOG_SCHEMA_VERSION}."
+                        )
+                    data.setdefault("schema_version", CATALOG_SCHEMA_VERSION)
                     return data
+        except CatalogSchemaError:
+            raise  # never reinitialize (overwrite) a file written by a newer version
         except Exception as e:
             print(f"⚠️ [CatalogSync] Error reading {CATALOG_FILE}: {e}. Reinitializing.")
 
@@ -150,10 +211,11 @@ def rollback_catalog(target_version: Optional[int] = None) -> Dict[str, Any]:
     with open(chosen["filepath"], "r", encoding="utf-8") as f:
         restored_data = json.load(f)
 
-    # Save snapshot of current before rollback for safety
-    save_catalog_snapshot(current)
-
-    save_catalog(restored_data)
+    # Save snapshot of current before rollback for safety (single-writer lock held for snapshot + write)
+    with catalog_write_lock():
+        save_catalog_snapshot(current)
+        restored_data.setdefault("schema_version", CATALOG_SCHEMA_VERSION)
+        save_catalog(restored_data)
     METRICS["catalog_rollbacks"] = METRICS.get("catalog_rollbacks", 0) + 1
     print(f"⏪ [CatalogSync] Successfully rolled back to Version {restored_data.get('catalog_version')} from {chosen['filename']}")
     return restored_data
@@ -562,8 +624,26 @@ async def run_weekly_catalog_sync(
         print(f"🔍 [CatalogSync] Dry-run finished. Changes: +{stats['added_count']}, ~{stats['modified_count']}, -{stats['delisted_count']}")
         return report
 
-    # Stage 7: APPLY IN TRANSACTION
-    # A. Snapshot before apply (Rollback safety)
+    # Stage 7: APPLY IN TRANSACTION (single writer: lock is held until the new catalog is saved)
+    with catalog_write_lock():
+        return await _apply_catalog_sync(current_catalog, diff, stats, report)
+
+
+async def _apply_catalog_sync(
+    current_catalog: Dict[str, Any],
+    diff: Dict[str, Any],
+    stats: Dict[str, Any],
+    report: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Stage 7 body; must be called with catalog_write_lock() held."""
+    # Re-check under the lock: if another writer bumped the version since stage 1, abort instead of overwriting.
+    on_disk_version = load_catalog().get("catalog_version", 1)
+    if on_disk_version != current_catalog.get("catalog_version", 1):
+        raise CatalogLockedError(
+            f"Catalog changed during sync (v{current_catalog.get('catalog_version', 1)} -> v{on_disk_version}); aborting."
+        )
+
+    # A. Backup (snapshot) before every apply (Rollback safety)
     snapshot_path = save_catalog_snapshot(current_catalog)
     report["snapshot_path"] = snapshot_path
 
@@ -612,6 +692,7 @@ async def run_weekly_catalog_sync(
     active_symbols = [s for s in all_symbols if s.get("is_active", 1)]
 
     updated_catalog = {
+        "schema_version": CATALOG_SCHEMA_VERSION,
         "catalog_version": new_version,
         "app_version": APP_VERSION,
         "last_sync_at": now_iso,
