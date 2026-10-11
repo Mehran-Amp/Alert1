@@ -25,9 +25,7 @@ EXACT_YF_MAP: Dict[str, str] = {
     'US10Y': '^TNX',
     '^TNX': '^TNX',
     'TNX': '^TNX',
-    'US02Y': '^IRX',
-    'US2Y': '^IRX',
-    '^2YY': '^IRX',
+    'US13W': '^IRX',
     '^IRX': '^IRX',
     'VIX': '^VIX',
     '^VIX': '^VIX',
@@ -91,6 +89,10 @@ FOREX_PAIRS = {
     'EURGBP', 'EURJPY', 'GBPJPY', 'EURCHF', 'AUDJPY', 'GBPAUD', 'USDCNY',
     'USDTRY', 'USDMXN', 'USDZAR', 'EURCAD', 'EURAUD'
 }
+
+# 2-year Treasury yield exists only on FRED (DGS2). Yahoo's ^IRX is the 13-week bill, never a 2Y proxy.
+FRED_ONLY_SYMBOLS = frozenset({'US02Y', 'US2Y', '^2YY'})
+
 
 def resolve_yf_symbol(symbol: str) -> str:
     """
@@ -168,7 +170,8 @@ WALLSTREET_MACRO_SYMBOLS = [
     {"id": "OMR_BONBAST", "symbol": "OMR/TMN", "nameEn": "Omani Rial Cash", "nameFa": "ریال عمان (مرجع بن‌بست)", "category": "iran_market", "marketName": "بن‌بست (bonbast.com)", "unit": "ت"},
     {"id": "JPY_BONBAST", "symbol": "JPY/TMN", "nameEn": "Japanese Yen (10)", "nameFa": "۱۰ ین ژاپن (مرجع بن‌بست)", "category": "iran_market", "marketName": "بن‌بست (bonbast.com)", "unit": "ت"},
     {"id": "US10Y", "symbol": "US10Y (^TNX)", "nameEn": "US 10-Year Treasury Yield", "nameFa": "بازده اوراق قرضه ۱۰ ساله آمریکا (US10Y)", "category": "bond", "marketName": "US Treasury", "unit": "%"},
-    {"id": "US02Y", "symbol": "US02Y (^IRX)", "nameEn": "US 2-Year Treasury Yield", "nameFa": "بازده اوراق قرضه ۲ ساله آمریکا (US02Y)", "category": "bond", "marketName": "US Treasury", "unit": "%"},
+    {"id": "US02Y", "symbol": "US02Y (DGS2)", "nameEn": "US 2-Year Treasury Yield", "nameFa": "بازده اوراق قرضه ۲ ساله آمریکا (US02Y)", "category": "bond", "marketName": "US Treasury", "unit": "%"},
+    {"id": "US13W", "symbol": "US13W (^IRX)", "nameEn": "US 13-Week Treasury Bill Yield", "nameFa": "بازده اوراق ۱۳ هفته‌ای خزانه‌داری آمریکا (US13W)", "category": "bond", "marketName": "US Treasury", "unit": "%"},
     {"id": "US30Y", "symbol": "US30Y (^TYX)", "nameEn": "US 30-Year Treasury Bond", "nameFa": "بازده اوراق قرضه ۳۰ ساله آمریکا (US30Y)", "category": "bond", "marketName": "US Treasury", "unit": "%"},
     {"id": "EURUSD", "symbol": "EUR/USD", "nameEn": "Euro / US Dollar", "nameFa": "یورو به دلار آمریکا (EUR/USD)", "category": "forex", "marketName": "Forex Major", "unit": "$"},
     {"id": "GBPUSD", "symbol": "GBP/USD", "nameEn": "British Pound / US Dollar", "nameFa": "پوند انگلیس به دلار (GBP/USD)", "category": "forex", "marketName": "Forex Major", "unit": "$"},
@@ -609,7 +612,9 @@ class FredAdapter(BaseMarketAdapter):
         'TNX': 'DGS10',
         'US02Y': 'DGS2',
         'US2Y': 'DGS2',
-        '^IRX': 'DGS2',
+        '^2YY': 'DGS2',
+        'US13W': 'DTB3',
+        '^IRX': 'DTB3',
         'US30Y': 'DGS30',
         '^TYX': 'DGS30',
         'DXY': 'DTWEXBGS',
@@ -637,7 +642,7 @@ class FredAdapter(BaseMarketAdapter):
                                 'asOf': int(time.time()),
                                 'date': obs[0].get('date'),
                                 'state': 'LIVE',
-                                'currency': '%' if 'DGS' in series_id or series_id in ('FEDFUNDS', 'UNRATE') else 'pts',
+                                'currency': '%' if series_id.startswith(('DGS', 'DTB')) or series_id in ('FEDFUNDS', 'UNRATE') else 'pts',
                                 'source': 'FRED'
                             }
                         except ValueError:
@@ -687,7 +692,7 @@ def resolve_symbol_category(symbol: str) -> str:
         return 'commodity'
     if s.startswith('^') or s in ('SP500', 'SPX', 'NDX', 'NASDAQ', 'DJI', 'DOW', 'RUT', 'DAX', 'FTSE', 'NIKKEI', 'VIX', 'DXY'):
         return 'index'
-    if s in ('US10Y', 'US02Y', 'US30Y', '^TNX', '^IRX', '^TYX', 'FEDFUNDS', 'CPI', 'UNRATE'):
+    if s in ('US10Y', 'US02Y', 'US2Y', '^2YY', 'US13W', 'US30Y', '^TNX', '^IRX', '^TYX', 'FEDFUNDS', 'CPI', 'UNRATE'):
         return 'macro'
 
     for item in WALLSTREET_MACRO_SYMBOLS:
@@ -740,6 +745,10 @@ async def fetch_global_stocks(
             p_fred = await _try_fetch('FRED API', fred_url, fred_adapter._make_extractor(fred_series))
             if p_fred and not collect_all_traces:
                 return p_fred
+
+    # 2Y yield is FRED-only (DGS2): never fall through to Yahoo (^IRX is the 13-week bill)
+    if symbol.upper().strip() in FRED_ONLY_SYMBOLS:
+        return None
 
     # 2. Yahoo Finance: query1
     url1 = f'https://query1.finance.yahoo.com/v8/finance/chart/{yf_symbol}?interval=1m&range=1d'

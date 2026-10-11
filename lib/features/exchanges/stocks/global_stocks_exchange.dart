@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/services/server_alert_service.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -1833,24 +1834,6 @@ class GlobalStocksExchange implements Exchange {
   static Map<String, dynamic>? _cachedCoinGeckoGlobalData;
   static DateTime? _cachedCoinGeckoTime;
 
-  static const Map<String, String> stooqSymbolMap = {
-    '^GSPC': '^spx',
-    '^DJI': '^dji',
-    '^IXIC': '^ndq',
-    '^RUT': '^rut',
-    'AAPL': 'aapl.us',
-    'MSFT': 'msft.us',
-    'GOOGL': 'googl.us',
-    'AMZN': 'amzn.us',
-    'NVDA': 'nvda.us',
-    'TSLA': 'tsla.us',
-    'EURUSD=X': 'eurusd',
-    'GBPUSD=X': 'gbpusd',
-    'USDJPY=X': 'usdjpy',
-    'GC=F': 'xauusd',
-    'CL=F': 'cl.f',
-  };
-
   @override
   Future<MarketTicker> fetchTicker(CurrencyPair pair) async {
     final cleanSymbol = pair.baseCurrency;
@@ -1982,126 +1965,39 @@ class GlobalStocksExchange implements Exchange {
       }
     }
 
-    // 2. Try Yahoo Finance primary & secondary endpoints for Stocks, Commodities & Forex
-    final hosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
-
-    for (final host in hosts) {
-      try {
-        final url = Uri.parse(
-            'https://$host/v8/finance/chart/$cleanSymbol?interval=1m&range=1d');
-        final response = await _client.get(url, headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json',
-        }).timeout(const Duration(seconds: 6));
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(utf8.decode(response.bodyBytes));
-          final result = data['chart']?['result']?[0];
-          if (result != null) {
-            final meta = result['meta'] as Map<String, dynamic>? ?? {};
-            final regularPrice = (meta['regularMarketPrice'] as num?)?.toDouble() ?? 0.0;
-            final double high = (meta['regularMarketDayHigh'] as num?)?.toDouble() ?? regularPrice;
-            final double low = (meta['regularMarketDayLow'] as num?)?.toDouble() ?? regularPrice;
-            final double volume = (meta['regularMarketVolume'] as num?)?.toDouble() ?? 0.0;
-
-            final int? regularMarketTime = (meta['regularMarketTime'] as num?)?.toInt();
-            final DateTime? asOf = regularMarketTime != null
-                ? DateTime.fromMillisecondsSinceEpoch(regularMarketTime * 1000, isUtc: true)
-                : null;
-
-            final rawMarketState = (meta['marketState'] as String?)?.toUpperCase();
-            String state = 'live';
-            if (rawMarketState == 'CLOSED' ||
-                rawMarketState == 'POSTPOST' ||
-                rawMarketState == 'PREPRE') {
-              state = 'closed';
-            } else if (asOf != null &&
-                DateTime.now().toUtc().difference(asOf).inMinutes > 15) {
-              state = 'delayed';
-            } else if (rawMarketState != null && rawMarketState != 'REGULAR') {
-              state = 'delayed';
-            }
-
-            final String quoteUnit = (meta['currency'] as String?)?.toUpperCase() ?? 'USD';
-
-            if (regularPrice > 0) {
-              final ticker = MarketTicker(
-                exchangeId: id,
-                pair: pair,
-                lastPrice: regularPrice,
-                volume24h: volume,
-                high24h: high,
-                low24h: low,
-                timestamp: asOf ?? DateTime.now(),
-                asOf: asOf,
-                state: state,
-                quoteUnit: quoteUnit,
-                source: 'YahooFinance',
-              );
-              _lastKnownLiveTickers[cleanSymbol] = ticker;
-              return ticker;
-            }
-          }
-        } else if (response.statusCode == 404) {
-          // If 404, symbol is not found on Yahoo; do not retry query2
-          break;
-        }
-      } catch (e) {
-        debugPrint('GlobalStocksExchange Yahoo Finance fetch error ($host, $cleanSymbol): $e');
+    // 2. Live price comes only from the Python server (/api/price); the app never calls providers directly
+    final details = await ServerAlertService.fetchPriceDetailsViaServer(id, cleanSymbol);
+    final serverPrice = (details?['price'] as num?)?.toDouble() ?? 0.0;
+    if (details != null && serverPrice > 0) {
+      final asOfSec = (details['asOf'] as num?)?.toInt();
+      final DateTime? asOf = asOfSec != null
+          ? DateTime.fromMillisecondsSinceEpoch(asOfSec * 1000, isUtc: true)
+          : null;
+      final rawState = (details['state'] as String?)?.toUpperCase();
+      String state = 'live';
+      if (rawState == 'CLOSED') {
+        state = 'closed';
+      } else if (rawState != null && rawState != 'LIVE') {
+        state = 'delayed';
       }
+      final ticker = MarketTicker(
+        exchangeId: id,
+        pair: pair,
+        lastPrice: serverPrice,
+        volume24h: (details['volume'] as num?)?.toDouble() ?? 0.0,
+        high24h: (details['high'] as num?)?.toDouble() ?? serverPrice,
+        low24h: (details['low'] as num?)?.toDouble() ?? serverPrice,
+        timestamp: asOf ?? DateTime.now(),
+        asOf: asOf,
+        state: state,
+        quoteUnit: (details['currency'] as String?)?.toUpperCase() ?? 'USD',
+        source: (details['source'] as String?) ?? 'Server',
+      );
+      _lastKnownLiveTickers[cleanSymbol] = ticker;
+      return ticker;
     }
 
-    // 3. Stooq Financial Mirror (for verified symbols only with explicit mapping & CSV)
-    final stooqCode = stooqSymbolMap[cleanSymbol];
-    if (stooqCode != null) {
-      try {
-        final stooqUrl = Uri.parse(
-            'https://stooq.com/q/l/?s=$stooqCode&f=sd2t2ohlcv&h&e=csv');
-        final res = await _client.get(stooqUrl, headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        }).timeout(const Duration(seconds: 5));
-
-        if (res.statusCode == 200) {
-          final lines = utf8.decode(res.bodyBytes).trim().split(RegExp(r'\r?\n'));
-          if (lines.length >= 2) {
-            final cols = lines[1].split(',');
-            if (cols.length >= 7) {
-              final closeStr = cols[6].trim();
-              final p = double.tryParse(closeStr);
-              if (p != null && p > 0) {
-                DateTime? asOf;
-                if (cols.length >= 3) {
-                  final dateStr = cols[1].trim();
-                  final timeStr = cols[2].trim();
-                  asOf = DateTime.tryParse('${dateStr}T$timeStr');
-                }
-                final ticker = MarketTicker(
-                  exchangeId: id,
-                  pair: pair,
-                  lastPrice: p,
-                  volume24h: cols.length >= 8 ? (double.tryParse(cols[7].trim()) ?? 0.0) : 0.0,
-                  high24h: cols.length >= 5 ? (double.tryParse(cols[4].trim()) ?? p) : p,
-                  low24h: cols.length >= 6 ? (double.tryParse(cols[5].trim()) ?? p) : p,
-                  timestamp: asOf ?? DateTime.now(),
-                  asOf: asOf,
-                  state: 'delayed',
-                  quoteUnit: 'USD',
-                  source: 'Stooq',
-                );
-                _lastKnownLiveTickers[cleanSymbol] = ticker;
-                return ticker;
-              }
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('GlobalStocksExchange Stooq fetch error ($stooqCode): $e');
-      }
-    }
-
-    // 4. Return cached live ticker if available from previous successful network fetch
+    // 3. Return cached live ticker if available from previous successful server fetch
     if (_lastKnownLiveTickers.containsKey(cleanSymbol)) {
       return _lastKnownLiveTickers[cleanSymbol]!;
     }

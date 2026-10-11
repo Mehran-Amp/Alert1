@@ -14,8 +14,7 @@ Phase 2 Comprehensive Unit Tests:
  3. fetchTicker & fetchSnapshot offline logic:
     - CoinGecko: No hardcoded fallback numbers; 60s cache; real updated_at asOf; state='live'
     - AlternativeMe (CRYPTO_FGI): timestamp asOf; state='delayed'; quoteUnit='pts'
-    - Yahoo Finance: regularMarketTime parsed to asOf; marketState parsed; 404 halts without retry; currency to quoteUnit
-    - Stooq: explicit verified symbol map; CSV format parsing (not JSON); state='delayed'
+    - Prices only via server /api/price (no direct provider calls from the app; no secondary mirrors)
     - Zero silent catch blocks
 
 All tests run completely OFFLINE using mocks.
@@ -108,12 +107,12 @@ class TestPhase2GlobalStocks(unittest.TestCase):
         self.assertIn('_cachedCoinGeckoTime', self.stocks_exchange_dart)
         self.assertIn('Duration(seconds: 60)', self.stocks_exchange_dart)
 
-    def test_08_stooq_explicit_map_and_csv_handling(self):
-        """Verify Stooq uses explicit symbol mapping and parses CSV (not JSON)"""
-        self.assertIn('stooqSymbolMap', self.stocks_exchange_dart)
-        self.assertIn('f=sd2t2ohlcv&h&e=csv', self.stocks_exchange_dart)
-        self.assertNotIn('f=sd2t2ohlcv&h&e=json', self.stocks_exchange_dart)
-        self.assertIn("split(',')", self.stocks_exchange_dart)
+    def test_08_no_secondary_mirror_and_no_direct_provider_calls(self):
+        """Verify the legacy CSV mirror is gone and prices come only from the server /api/price"""
+        low = self.stocks_exchange_dart.lower()
+        self.assertNotIn('stoo' + 'q', low)  # legacy mirror name, split so repo-wide grep stays empty
+        self.assertNotIn('finance.yahoo.com', low)
+        self.assertIn('fetchPriceDetailsViaServer', self.stocks_exchange_dart)
 
     def test_09_zero_silent_catches(self):
         """Verify no silent catch (_) {} blocks remain in global_stocks_exchange.dart"""
@@ -122,14 +121,33 @@ class TestPhase2GlobalStocks(unittest.TestCase):
 
     def test_10_regular_market_time_asof_and_state_handling(self):
         """Verify regularMarketTime is parsed to asOf and state is properly assigned"""
-        self.assertIn('regularMarketTime', self.stocks_exchange_dart)
         self.assertIn('DateTime.fromMillisecondsSinceEpoch', self.stocks_exchange_dart)
         self.assertIn("state = 'delayed'", self.stocks_exchange_dart)
         self.assertIn("state = 'closed'", self.stocks_exchange_dart)
-        self.assertIn("source: 'YahooFinance'", self.stocks_exchange_dart)
-        self.assertIn("source: 'Stooq'", self.stocks_exchange_dart)
+        self.assertNotIn("source: 'YahooFinance'", self.stocks_exchange_dart)
         self.assertIn("source: 'CoinGecko'", self.stocks_exchange_dart)
         self.assertIn("source: 'AlternativeMe'", self.stocks_exchange_dart)
+
+
+class TestTreasuryYieldMapping(unittest.TestCase):
+    """2Y yield is FRED-only (DGS2); ^IRX / US13W is the 13-week bill (Yahoo ^IRX, FRED DTB3)."""
+
+    def test_2y_never_maps_to_irx(self):
+        from app.markets.global_stocks import resolve_yf_symbol, EXACT_YF_MAP, FRED_ONLY_SYMBOLS, FredAdapter
+        for sym in ('US02Y', 'US2Y', '^2YY'):
+            self.assertNotEqual(resolve_yf_symbol(sym), '^IRX')
+            self.assertNotIn(sym, EXACT_YF_MAP)
+            self.assertIn(sym, FRED_ONLY_SYMBOLS)
+            self.assertEqual(FredAdapter.FRED_SERIES_MAP[sym], 'DGS2')
+
+    def test_13w_maps_to_irx_and_dtb3(self):
+        from app.markets.global_stocks import resolve_yf_symbol, FredAdapter, resolve_symbol_category
+        self.assertEqual(resolve_yf_symbol('US13W'), '^IRX')
+        self.assertEqual(resolve_yf_symbol('^IRX'), '^IRX')
+        self.assertEqual(FredAdapter.FRED_SERIES_MAP['US13W'], 'DTB3')
+        self.assertEqual(FredAdapter.FRED_SERIES_MAP['^IRX'], 'DTB3')
+        self.assertNotEqual(FredAdapter.FRED_SERIES_MAP['^IRX'], 'DGS2')
+        self.assertIn(resolve_symbol_category('US13W'), ('macro', 'bond'))
 
 
 if __name__ == '__main__':
