@@ -3,11 +3,13 @@ import re
 import json
 from typing import Dict, Any
 
-APP_VERSION = "3.0.2"
+APP_VERSION = "3.1.0"
 
 DATA_DIR = os.getenv("DATA_DIR", ".")
 CATALOG_FILE = os.path.join(DATA_DIR, "catalog.json") if DATA_DIR != "." else "catalog.json"
 CATALOG_SNAPSHOTS_DIR = os.path.join(DATA_DIR, "catalog_snapshots") if DATA_DIR != "." else "catalog_snapshots"
+# Bump when the catalog.json layout changes; load_catalog() refuses files written by a newer schema.
+CATALOG_SCHEMA_VERSION = 1
 
 # 0. Security Configuration, Auth Dependencies & Validation Helpers
 API_KEY = os.getenv("API_KEY", "").strip()          # shared key the mobile app sends as X-API-Key

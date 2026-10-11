@@ -73,30 +73,38 @@ class TestPhase2GlobalStocks(unittest.TestCase):
                                  f"Pre-IPO symbol {sym} should have been removed")
 
     def test_04_irx_correct_treasury_bill_label(self):
-        """Verify ^IRX label is 13-week T-bill and NOT 2-year note"""
-        irx_match = re.search(r"'symbol':\s*'\^IRX'[\s\S]*?'nameFa':\s*'([^']+)'", self.stocks_exchange_dart)
-        self.assertIsNotNone(irx_match, "^IRX must be present")
-        name_fa = irx_match.group(1)
-        self.assertIn('۱۳ هفته‌ای', name_fa, f"Expected 13-week label, got: {name_fa}")
-        self.assertNotIn('۲ ساله', name_fa, f"Should not be labeled as 2-year: {name_fa}")
+        """Server catalog is the source of truth: US13W (^IRX) is the 13-week bill, US02Y is the 2-year (DGS2)"""
+        from app.markets.global_stocks import WALLSTREET_MACRO_SYMBOLS
+        by_id = {s['id']: s for s in WALLSTREET_MACRO_SYMBOLS}
+        self.assertIn('US13W', by_id, "US13W must be in the server catalog")
+        self.assertIn('۱۳ هفته‌ای', by_id['US13W']['nameFa'])
+        self.assertNotIn('۲ ساله', by_id['US13W']['nameFa'])
+        self.assertIn('۲ ساله', by_id['US02Y']['nameFa'])
+        self.assertNotIn('^IRX', by_id['US02Y']['symbol'])
 
     def test_05_predefined_stocks_zero_static_ranks(self):
         """Verify static ranks (رتبه X جهان) are removed from nameFa"""
         rank_matches = re.findall(r"'nameFa':\s*'[^']*رتبه\s+\d+\s+جهان[^']*'", self.stocks_exchange_dart)
         self.assertEqual(len(rank_matches), 0, f"Found static ranks in nameFa: {rank_matches}")
 
-    def test_06_predefined_stocks_all_have_unit_and_required_keys(self):
-        """Verify every single item has unit without breaking symbol, name, nameFa, cat, icon, price"""
-        blocks = re.findall(r'(\{\s*\'symbol\':\s*\'[^\']+\'[\s\S]*?\n\s*\})', self.stocks_exchange_dart)
-        self.assertGreater(len(blocks), 150, "Should have loaded full catalog")
-        
+    def test_06_no_static_symbol_list_beyond_crypto_macro(self):
+        """Phase 3: the app ships no static symbol list except crypto-macro indices and a <=20 offline fallback"""
+        blocks = re.findall(r"(\{\s*'symbol':\s*'[^']+'[\s\S]*?\n\s*\})", self.stocks_exchange_dart)
+        self.assertLessEqual(len(blocks), 7, "Only the 7 crypto-macro entries may stay static in global_stocks_exchange.dart")
         required_keys = ['symbol', 'name', 'nameFa', 'cat', 'icon', 'price', 'unit']
         for b in blocks:
             sym_m = re.search(r"'symbol':\s*'([^']+)'", b)
             sym = sym_m.group(1) if sym_m else 'unknown'
             with self.subTest(symbol=sym):
+                self.assertIn("'cat': 'CryptoMacro'", b)
                 for k in required_keys:
                     self.assertIn(f"'{k}':", b, f"Missing required key '{k}' in item {sym}")
+        self.assertIn('CatalogSyncService.instance.items', self.stocks_exchange_dart)
+
+        with open('lib/core/services/catalog_sync_service.dart', 'r', encoding='utf-8') as f:
+            svc = f.read()
+        seed = svc[svc.index('void _seedDefaultCatalog()'):svc.index('Future<bool> syncDelta()')]
+        self.assertLessEqual(len(re.findall(r"CatalogItem\(id:", seed)), 20, "Offline fallback must stay <= 20 symbols")
 
     def test_07_coingecko_zero_hardcoded_fake_numbers(self):
         """Verify that live CoinGecko code does not contain hardcoded default fallbacks"""

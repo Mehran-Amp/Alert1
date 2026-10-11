@@ -37,3 +37,6 @@ catalog.db
 backups/
 *.tar.gz
 tmp/
+
+# Catalog single-writer lock
+catalog.json.lock

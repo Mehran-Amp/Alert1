@@ -162,6 +162,11 @@ class CatalogSyncService extends ChangeNotifier {
     syncDelta();
   }
 
+  /// Maximum number of symbols the app may ship as a hard-coded offline fallback.
+  /// Everything else must come from the server catalog (/api/symbols/catalog + delta sync).
+  static const int maxOfflineFallbackSymbols = 20;
+
+  /// Minimal offline fallback used only when there is no disk cache yet and the server is unreachable.
   void _seedDefaultCatalog() {
     _items = [
       // Top Macro & Global
@@ -186,12 +191,8 @@ class CatalogSyncService extends ChangeNotifier {
       CatalogItem(id: 'EURUSD=X', symbol: 'EURUSD=X', nameEn: 'EUR / USD', nameFa: 'یورو به دلار آمریکا', category: 'forex', unit: '\$', source: 'Twelve Data'),
       CatalogItem(id: 'GBPUSD=X', symbol: 'GBPUSD=X', nameEn: 'GBP / USD', nameFa: 'پوند انگلیس به دلار آمریکا', category: 'forex', unit: '\$', source: 'Twelve Data'),
       CatalogItem(id: 'USDJPY=X', symbol: 'USDJPY=X', nameEn: 'USD / JPY', nameFa: 'دلار آمریکا به ین ژاپن', category: 'forex', unit: '¥', source: 'Twelve Data'),
-      // Iran Domestic
-      CatalogItem(id: 'USD_FREE', symbol: 'USD_FREE', nameEn: 'Free US Dollar (Tehran)', nameFa: 'دلار آزاد تهران', category: 'iran_market', unit: 'تومان', source: 'TGJU / Bonbast'),
-      CatalogItem(id: 'GOLD_18K', symbol: 'GOLD_18K', nameEn: 'Gold 18K (Gram)', nameFa: 'طلای ۱۸ عیار', category: 'iran_market', unit: 'تومان', source: 'TGJU'),
-      CatalogItem(id: 'COIN_EMAMI', symbol: 'COIN_EMAMI', nameEn: 'Emami Gold Coin', nameFa: 'سکه تمام طرح جدید (امامی)', category: 'iran_market', unit: 'تومان', source: 'TGJU'),
-      CatalogItem(id: 'TSE_INDEX', symbol: 'TSE_INDEX', nameEn: 'Tehran Stock Exchange Index', nameFa: 'شاخص کل بورس تهران', category: 'iran_market', unit: 'واحد', source: 'TSETMC'),
     ];
+    assert(_items.length <= maxOfflineFallbackSymbols, 'Offline fallback must stay <= 20 symbols');
   }
 
   /// Performs delta sync against backend server
