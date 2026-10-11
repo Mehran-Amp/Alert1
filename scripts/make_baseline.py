@@ -59,6 +59,10 @@ FIXED_PRICE_SAMPLES: List[Tuple[str, str]] = [
     ("bonbast", "USD/TMN"),
 ]
 
+# Golden keys use the label "yahoo/..." but the server only routes global_stocks/stocks/macro/forex/bonds/wallstreet
+# to the Yahoo-backed adapter; "/api/price/yahoo/..." has no handler and always answers 502.
+REQUEST_EXCHANGE_ALIASES = {"yahoo": "global_stocks"}
+
 STABLE_SYMBOL_KEYS = ("id", "symbol", "nameEn", "nameFa", "category", "marketName", "unit")
 
 
@@ -175,12 +179,14 @@ def capture_snapshot(base_url: str, api_key: Optional[str], phase: str, timeout:
     samples: Dict[str, Any] = {}
     for exchange, symbol in FIXED_PRICE_SAMPLES:
         norm = normalize_symbol(symbol)
-        code, body = fetch(base_url, f"/api/price/{exchange}/{urllib.parse.quote(norm, safe='^')}", api_key, timeout)
+        request_exchange = REQUEST_EXCHANGE_ALIASES.get(exchange, exchange)
+        code, body = fetch(base_url, f"/api/price/{request_exchange}/{urllib.parse.quote(norm, safe='^')}", api_key, timeout)
         samples[f"{exchange}/{symbol}"] = {
             "exchange": exchange,
             "input_symbol": symbol,
             "normalized_symbol": norm,
             "cache_key": f"{exchange}:{norm}",
+            "request_exchange": request_exchange,
             "http_status": code,
             "response_template": body if isinstance(body, dict) else None,
         }

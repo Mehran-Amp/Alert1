@@ -107,6 +107,20 @@ class TestCapture(unittest.TestCase):
         self.assertNotIn("added_at", sym)
         self.assertEqual(snap["metadata"]["server_version"], "SignalAlert Enterprise Engine v9.9.9")
 
+    def test_yahoo_samples_are_requested_through_global_stocks(self):
+        paths = []
+
+        def spy(base_url, path, api_key, timeout=15.0):
+            paths.append(path)
+            return self._fake_fetch(base_url, path, api_key, timeout)
+
+        snap = make_baseline.capture_snapshot("http://x", "k", "t", fetch=spy, root=ROOT)
+        self.assertFalse([p for p in paths if p.startswith("/api/price/yahoo/")])
+        self.assertIn("/api/price/global_stocks/AAPL", paths)
+        self.assertIn("/api/price/global_stocks/^TNX", paths)
+        self.assertEqual(snap["endpoints"]["price_samples"]["yahoo/AAPL"]["request_exchange"], "global_stocks")
+        self.assertEqual(snap["endpoints"]["price_samples"]["yahoo/AAPL"]["cache_key"], "yahoo:AAPL")
+
     def test_no_api_key_value_is_stored(self):
         snap = make_baseline.capture_snapshot("http://x", "SECRET-KEY-VALUE", "t", fetch=self._fake_fetch, root=ROOT)
         self.assertNotIn("SECRET-KEY-VALUE", json.dumps(snap))
